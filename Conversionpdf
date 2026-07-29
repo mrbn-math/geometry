@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Pop Idol Training: P6 Math Conversion Match</title>
+    <style>
+        :root {
+            --kpop-pink: #ff69b4;
+            --kpop-purple: #8a2be2;
+            --kpop-light-pink: #fff0f5;
+            --kpop-card-back: linear-gradient(135deg, #ff1493, #7b68ee);
+            --gold-star: #ffd700;
+            --cyber-dark: #1a0b2e;
+            --text-dark: #2c3e50;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: linear-gradient(135deg, #120428 0%, #2a085c 50%, #4a0e4e 100%);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 105, 180, 0.4);
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(255, 20, 147, 0.3);
+            padding: 25px;
+            position: relative;
+        }
+
+        /* Avatar / Idol Frame */
+        .idol-frame {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .idol-svg {
+            width: 90px;
+            height: 90px;
+            filter: drop-shadow(0 0 10px var(--kpop-pink));
+            transition: transform 0.3s ease;
+        }
+
+        .idol-name {
+            font-size: 0.95rem;
+            color: #ffb6c1;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-top: 6px;
+            text-transform: uppercase;
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #ffffff;
+            text-shadow: 0 0 12px var(--kpop-pink);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            color: #ffb6c1;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 1.05rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            color: #e0d0f0;
+        }
+
+        .badge {
+            background: rgba(255, 105, 180, 0.25);
+            border: 1px solid var(--kpop-pink);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        /* Stats Bar */
+        .game-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 105, 180, 0.3);
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #ffb6c1;
+        }
+
+        /* Memory Grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 15px;
+            perspective: 1000px;
+        }
+
+        @media (max-width: 500px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .card {
+            aspect-ratio: 1;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+            cursor: pointer;
+            border-radius: 12px;
+        }
+
+        .card.flipped, .card.matched {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            cursor: default;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-front {
+            background: var(--kpop-card-back);
+            border: 2px solid #ffffff;
+            color: white;
+            font-size: 1.8rem;
+        }
+
+        .card-back {
+            background: #ffffff;
+            color: var(--text-dark);
+            transform: rotateY(180deg);
+            border: 3px solid var(--kpop-pink);
+            padding: 5px;
+            text-align: center;
+        }
+
+        .card.matched .card-back {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            background: rgba(138, 43, 226, 0.25);
+            border-left: 4px solid var(--kpop-pink);
+            padding: 12px;
+            border-radius: 8px;
+            width: 100%;
+            text-align: left;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+        .hint-box.active { display: block; }
+
+        .hint-title {
+            color: #ffb6c1;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff1493, #8a2be2);
+            color: white;
+            border: 2px solid #ffffff;
+            padding: 12px 28px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4);
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.8);
+        }
+
+        /* Completion Results */
+        .results-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--kpop-pink);
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        .stat-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 1.1rem;
+        }
+
+        /* Animations */
+        .anim-celebrate {
+            animation: heartBounce 0.8s ease-in-out;
+        }
+
+        @keyframes heartBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2) rotate(5deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Top Idol Leader Avatar Frame -->
+    <div class="idol-frame">
+        <div id="idol-svg-container"></div>
+        <div id="idol-name" class="idol-name">Mina (Vocal Leader)</div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="screen active">
+        <div class="badge">Singapore P6 Foundation Math Revision</div>
+        <h1>K-Pop Idol Academy</h1>
+        <h2>Value Match Audition</h2>
+        <p>Welcome Trainee! Match equivalent <strong>Percentages</strong>, <strong>Decimals</strong>, and <strong>Fractions (Simplest Form)</strong> to clear your debut evaluation!</p>
+        <p>✨ Complete the match board in as few <strong>Attempts</strong> and as fast a <strong>Time</strong> as possible!</p>
+        <button class="btn" onclick="startGame()">Start Audition! 🎤</button>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <div class="game-header">
+            <div class="stat-item">
+                <span>🎤 Pairs Left:</span>
+                <span id="pairs-tracker">6/6</span>
+            </div>
+            <div class="stat-item">
+                <span>🎯 Attempts:</span>
+                <span id="attempts-count">0</span>
+            </div>
+            <div class="stat-item">
+                <span>⏱️ Time:</span>
+                <span id="timer-text">0.0s</span>
+            </div>
+        </div>
+
+        <div id="grid-container" class="grid-container"></div>
+
+        <div id="hint-box" class="hint-box">
+            <div id="hint-title" class="hint-title">💖 Idol Coach Advice:</div>
+            <div id="hint-text">Keep practicing! Convert percentages to fractions by placing them over 100.</div>
+        </div>
+    </div>
+
+    <!-- COMPLETION SCREEN -->
+    <div id="completion-screen" class="screen">
+        <h1>Debut Confirmed! ✨</h1>
+        
+        <div class="results-box">
+            <div class="stat-line">
+                <span>Total Time Taken:</span>
+                <strong id="final-time" style="color: #ffb6c1;">0.0s</strong>
+            </div>
+            <div class="stat-line">
+                <span>Total Attempts Made:</span>
+                <strong id="final-attempts" style="color: #00f0ff;">0</strong>
+            </div>
+            <div class="stat-line">
+                <span>Accuracy Score:</span>
+                <strong id="final-accuracy" style="color: #ffd700;">100%</strong>
+            </div>
+        </div>
+
+        <div id="rank-title" style="font-size: 1.4rem; color: #ffd700; font-weight: bold; margin-bottom: 10px;">Debut Rank: Center Visual 👑</div>
+        <p id="completion-message">Flawless execution! You've mastered percentage, decimal, and fraction conversions!</p>
+
+        <button class="btn" onclick="restartGame()">Next Stage 🔄</button>
+    </div>
+</div>
+
+<script>
+    // Audio Synthesizer for K-Pop SFX
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioCtx();
+    }
+
+    function playSFX(type) {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (type === 'match') {
+            // Sparkly K-pop chime
+            [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.25);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + idx * 0.08);
+                osc.stop(now + idx * 0.08 + 0.25);
+            });
+        } else if (type === 'mismatch') {
+            // Cute sad pop down
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.linearRampToValueAtTime(150, now + 0.2);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        } else if (type === 'flip') {
+            // Soft click
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, now);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } else if (type === 'victory') {
+            // Upbeat K-Pop Fanfare
+            [659.25, 659.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                gain.gain.setValueAtTime(0.2, now + idx * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + idx * 0.12);
+                osc.stop(now + idx * 0.12 + 0.3);
+            });
+        }
+    }
+
+    // K-Pop Idol Avatars
+    const idols = [
+        {
+            name: "Mina (Vocal Leader)",
+            svg: `<svg class="idol-svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" fill="#ff69b4"/>
+                    <circle cx="50" cy="45" r="22" fill="#ffe0bd"/>
+                    <path d="M 28 35 Q 50 15 72 35 Q 50 25 28 35 Z" fill="#4a0e4e"/>
+                    <circle cx="42" cy="45" r="3" fill="#222"/>
+                    <circle cx="58" cy="45" r="3" fill="#222"/>
+                    <path d="M 44 55 Q 50 60 56 55" stroke="#ff1493" stroke-width="2" fill="none"/>
+                    <path d="M 45 10 L 50 0 L 55 10 Z" fill="#ffd700"/>
+                  </svg>`
+        },
+        {
+            name: "Yuna (Dance Center)",
+            svg: `<svg class="idol-svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" fill="#8a2be2"/>
+                    <circle cx="50" cy="45" r="22" fill="#ffe0bd"/>
+                    <path d="M 25 40 Q 50 10 75 40 Q 50 30 25 40 Z" fill="#ff1493"/>
+                    <circle cx="42" cy="45" r="3" fill="#222"/>
+                    <circle cx="58" cy="45" r="3" fill="#222"/>
+                    <path d="M 43 54 Q 50 60 57 54" stroke="#ff1493" stroke-width="2" fill="none"/>
+                  </svg>`
+        }
+    ];
+
+    // Helper: Greatest Common Divisor for Simplest Form Fraction
+    function gcd(a, b) {
+        return b === 0 ? a : gcd(b, a % b);
+    }
+
+    // Helper: Convert Percentage to Simplest Fraction String
+    function getSimplestFraction(pct) {
+        if (pct === 100) return "1";
+        const common = gcd(pct, 100);
+        const num = pct / common;
+        const den = 100 / common;
+        return `${num}/${den}`;
+    }
+
+    // Generate Question Pool based on Singapore Math P6 Foundation constraints
+    function generateConversionPool() {
+        // Base percentages: 1%, 2%, 4%, 5%, 8%, 10%, 20%, 25%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100%
+        // Plus any multiples of 2% and 5% < 100
+        const allowedPctSet = new Set([1, 2, 4, 5, 8, 10, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]);
+        for (let i = 2; i < 100; i += 2) allowedPctSet.add(i);
+        for (let i = 5; i < 100; i += 5) allowedPctSet.add(i);
+
+        const allowedPctList = Array.from(allowedPctSet);
+
+        // Pick 6 random unique percentage values for a 12-card board (6 pairs)
+        const selected = [];
+        const copyList = [...allowedPctList];
+        for (let i = 0; i < 6; i++) {
+            const randomIndex = Math.floor(Math.random() * copyList.length);
+            selected.push(copyList.splice(randomIndex, 1)[0]);
+        }
+
+        // Build pairs using mixed representations (Percentage, Decimal, Fraction)
+        const cards = [];
+        selected.forEach((pct, pairId) => {
+            const decVal = (pct / 100).toString();
+            const fracVal = getSimplestFraction(pct);
+            const pctVal = `${pct}%`;
+
+            // Randomly select 2 different formats for this matching pair
+            const representations = [
+                { display: pctVal, type: 'Percentage', rawPct: pct },
+                { display: decVal, type: 'Decimal', rawPct: pct },
+                { display: fracVal, type: 'Fraction', rawPct: pct }
+            ];
+
+            // Shuffle representations and take 2
+            representations.sort(() => Math.random() - 0.5);
+            const rep1 = representations[0];
+            const rep2 = representations[1];
+
+            cards.push({ id: `p${pairId}-1`, pairId: pairId, display: rep1.display, type: rep1.type, rawPct: pct });
+            cards.push({ id: `p${pairId}-2`, pairId: pairId, display: rep2.display, type: rep2.type, rawPct: pct });
+        });
+
+        // Shuffle cards for grid
+        return cards.sort(() => Math.random() - 0.5);
+    }
+
+    // Game state
+    let cards = [];
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;
+    let matchedPairs = 0;
+    let attempts = 0;
+    let timerInterval = null;
+    let startTime = 0;
+
+    function startGame() {
+        initAudio();
+        document.getElementById('start-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
+
+        matchedPairs = 0;
+        attempts = 0;
+        firstCard = null;
+        secondCard = null;
+        lockBoard = false;
+
+        document.getElementById('attempts-count').innerText = "0";
+        document.getElementById('pairs-tracker').innerText = "6/6";
+        document.getElementById('hint-box').classList.remove('active');
+
+        // Set Avatar
+        const idol = idols[Math.floor(Math.random() * idols.length)];
+        document.getElementById('idol-svg-container').innerHTML = idol.svg;
+        document.getElementById('idol-name').innerText = idol.name;
+
+        // Generate Board
+        cards = generateConversionPool();
+        renderBoard();
+
+        // Start Timer
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 100);
+    }
+
+    function updateTimer() {
+        const diffInSeconds = (Date.now() - startTime) / 1000;
+        document.getElementById('timer-text').innerText = `${diffInSeconds.toFixed(1)}s`;
+    }
+
+    function renderBoard() {
+        const container = document.getElementById('grid-container');
+        container.innerHTML = '';
+
+        cards.forEach((card, index) => {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'card';
+            cardEl.dataset.index = index;
+
+            cardEl.innerHTML = `
+                <div class="card-face card-front">✨</div>
+                <div class="card-face card-back">${card.display}</div>
+            `;
+
+            cardEl.addEventListener('click', () => flipCard(cardEl, card));
+            container.appendChild(cardEl);
+        });
+    }
+
+    function flipCard(cardEl, cardData) {
+        if (lockBoard) return;
+        if (cardEl.classList.contains('flipped') || cardEl.classList.contains('matched')) return;
+
+        playSFX('flip');
+        cardEl.classList.add('flipped');
+
+        if (!firstCard) {
+            firstCard = { element: cardEl, data: cardData };
+            return;
+        }
+
+        secondCard = { element: cardEl, data: cardData };
+        attempts++;
+        document.getElementById('attempts-count').innerText = attempts;
+
+        checkMatch();
+    }
+
+    function checkMatch() {
+        const isMatch = firstCard.data.pairId === secondCard.data.pairId;
+
+        if (isMatch) {
+            disableCards();
+        } else {
+            unflipCards();
+        }
+    }
+
+    function disableCards() {
+        playSFX('match');
+        firstCard.element.classList.add('matched');
+        secondCard.element.classList.add('matched');
+
+        matchedPairs++;
+        document.getElementById('pairs-tracker').innerText = `${6 - matchedPairs}/6`;
+
+        resetBoard();
+
+        if (matchedPairs === 6) {
+            setTimeout(showCompletionScreen, 600);
+        }
+    }
+
+    function unflipCards() {
+        lockBoard = true;
+        playSFX('mismatch');
+
+        // Show tactical hint based on the pair attempted
+        showHint(firstCard.data, secondCard.data);
+
+        setTimeout(() => {
+            firstCard.element.classList.remove('flipped');
+            secondCard.element.classList.remove('flipped');
+            resetBoard();
+        }, 1400);
+    }
+
+    function showHint(card1, card2) {
+        const hintBox = document.getElementById('hint-box');
+        const hintText = document.getElementById('hint-text');
+
+        // Formulate tailored hint
+        let tip = "";
+        const fracStr = getSimplestFraction(card1.rawPct);
+        const decStr = (card1.rawPct / 100).toString();
+
+        tip = `💡 <strong>Coach Tip:</strong> ${card1.rawPct}% is equal to Decimal <strong>${decStr}</strong> and Fraction <strong>${fracStr}</strong> in its simplest form.`;
+
+        hintText.innerHTML = tip;
+        hintBox.classList.add('active');
+    }
+
+    function resetBoard() {
+        [firstCard, secondCard] = [null, null];
+        lockBoard = false;
+    }
+
+    function showCompletionScreen() {
+        clearInterval(timerInterval);
+        playSFX('victory');
+
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('completion-screen').classList.add('active');
+
+        const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        const accuracy = Math.round((6 / attempts) * 100);
+
+        document.getElementById('final-time').innerText = `${totalTime}s`;
+        document.getElementById('final-attempts').innerText = `${attempts} attempts`;
+        document.getElementById('final-accuracy').innerText = `${accuracy}%`;
+
+        const rankTitle = document.getElementById('rank-title');
+        const completionMsg = document.getElementById('completion-message');
+
+        if (attempts === 6) {
+            rankTitle.innerText = "Debut Rank: Center Visual Idol 👑";
+            completionMsg.innerText = "Flawless score! Perfect conversions with zero errors!";
+        } else if (attempts <= 10) {
+            rankTitle.innerText = "Debut Rank: Lead Performer 🌟";
+            completionMsg.innerText = "Great job! Strong math speed and solid accuracy.";
+        } else {
+            rankTitle.innerText = "Debut Rank: Rising Idol Trainee 💖";
+            completionMsg.innerText = "Good effort! Practice converting fractions to decimals over 100 to level up!";
+        }
+    }
+
+    function restartGame() {
+        document.getElementById('completion-screen').classList.remove('active');
+        startGame();
+    }
+</script>
+
+</body>
+</html>
