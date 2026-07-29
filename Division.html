@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Pop Math Stage: Division Platformer</title>
+    <!-- Import maps polyfill -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+        :root {
+            --primary-neon: #ff007f;
+            --secondary-neon: #00f0ff;
+            --accent-gold: #ffe600;
+            --bg-dark: #0a0518;
+            --glass-bg: rgba(20, 10, 35, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.18);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+        }
+
+        .interactive-ui {
+            pointer-events: auto;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Start Screen Overlay */
+        #start-overlay, #end-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            background: rgba(10, 5, 24, 0.85);
+            backdrop-filter: blur(16px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            width: 90%;
+            max-width: 550px;
+            padding: 35px;
+            text-align: center;
+            border: 2px solid var(--primary-neon);
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.4);
+            animation: pulseGlow 3s infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 15px rgba(255, 0, 127, 0.3); }
+            100% { box-shadow: 0 0 30px rgba(0, 240, 255, 0.6); }
+        }
+
+        h1.title {
+            font-size: 2.4rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(45deg, var(--primary-neon), var(--secondary-neon));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255,0,127,0.3);
+        }
+
+        p.subtitle {
+            font-size: 1rem;
+            color: #d1c4e9;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        /* Table Selection Grid */
+        .table-selector-title {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-gold);
+            margin-bottom: 12px;
+        }
+
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .table-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .table-btn.selected {
+            background: linear-gradient(135deg, var(--primary-neon), #b000ff);
+            border-color: #fff;
+            box-shadow: 0 0 12px rgba(255, 0, 127, 0.6);
+            transform: scale(1.05);
+        }
+
+        /* Stylized Action Buttons */
+        .btn-action {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #fff;
+            background: linear-gradient(90deg, var(--primary-neon), var(--secondary-neon));
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 0, 127, 0.6);
+        }
+
+        .btn-action:active {
+            transform: translateY(1px);
+        }
+
+        /* Header / Stats HUD */
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 10px 20px;
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #a090c0;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+            text-shadow: 0 0 8px rgba(255, 230, 0, 0.4);
+        }
+
+        /* K-POP AVATAR DISPLAY (ABOVE QUESTION BOX) */
+        .avatar-stage {
+            width: 100%;
+            max-width: 700px;
+            margin: 8px auto 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 75px;
+            height: 75px;
+            flex-shrink: 0;
+        }
+
+        .avatar-ring {
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            width: 83px;
+            height: 83px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-neon);
+            box-shadow: 0 0 15px var(--primary-neon);
+            animation: rotateGlow 6s linear infinite;
+        }
+
+        @keyframes rotateGlow {
+            0% { transform: rotate(0deg); border-color: var(--primary-neon); }
+            50% { border-color: var(--secondary-neon); box-shadow: 0 0 15px var(--secondary-neon); }
+            100% { transform: rotate(360deg); border-color: var(--primary-neon); }
+        }
+
+        .avatar-card {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1b022d, #42085c);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border: 2px solid #fff;
+        }
+
+        .avatar-svg {
+            width: 60px;
+            height: 60px;
+            transition: transform 0.3s ease;
+        }
+
+        /* Avatar Animations */
+        .avatar-stage.correct .avatar-svg {
+            animation: bounceHappy 0.6s ease infinite alternate;
+        }
+
+        .avatar-stage.incorrect .avatar-svg {
+            animation: nodSupportive 0.5s ease 2;
+        }
+
+        @keyframes bounceHappy {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-8px) scale(1.1) rotate(5deg); }
+        }
+
+        @keyframes nodSupportive {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(5px) rotate(-5deg); }
+        }
+
+        .speech-bubble {
+            position: relative;
+            padding: 10px 18px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #ffffff;
+            border-radius: 14px;
+            max-width: 450px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            border: 1.5px solid var(--glass-border);
+            transition: all 0.2s ease;
+        }
+
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 6px 10px 6px 0;
+            border-style: solid;
+            border-color: transparent var(--glass-border) transparent transparent;
+        }
+
+        /* Question Banner & Answers Overlay */
+        .question-container {
+            width: 100%;
+            max-width: 700px;
+            margin: 5px auto 0 auto;
+            text-align: center;
+            padding: 18px;
+            position: relative;
+        }
+
+        .question-text {
+            font-size: 2.6rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #ffffff;
+            text-shadow: 0 0 15px var(--secondary-neon);
+        }
+
+        /* Answers Grid */
+        .answers-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 600px;
+            margin: 12px auto 0 auto;
+        }
+
+        .answer-card {
+            padding: 16px;
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .answer-card:hover {
+            background: rgba(0, 240, 255, 0.2);
+            border-color: var(--secondary-neon);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+            transform: scale(1.02);
+        }
+
+        /* Hint Drawer */
+        .hint-section {
+            width: 100%;
+            max-width: 700px;
+            margin: 8px auto 0 auto;
+        }
+
+        .btn-hint {
+            background: rgba(255, 230, 0, 0.15);
+            border: 1px solid var(--accent-gold);
+            color: var(--accent-gold);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-hint:hover {
+            background: var(--accent-gold);
+            color: #000;
+            box-shadow: 0 0 10px rgba(255, 230, 0, 0.5);
+        }
+
+        .hint-box {
+            margin-top: 8px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            color: #e0d0ff;
+            border-left: 4px solid var(--accent-gold);
+            display: none;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .hint-box.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Feedback Toast */
+        #feedback-toast {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 50;
+        }
+
+        #feedback-toast.correct {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            background: rgba(0, 255, 136, 0.9);
+            color: #003815;
+            box-shadow: 0 0 30px #00ff88;
+        }
+
+        #feedback-toast.incorrect {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            background: rgba(255, 0, 85, 0.9);
+            color: #ffffff;
+            box-shadow: 0 0 30px #ff0055;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive UI fixes */
+        @media (max-height: 720px) {
+            .avatar-wrapper { width: 60px; height: 60px; }
+            .avatar-ring { width: 68px; height: 68px; }
+            .avatar-svg { width: 48px; height: 48px; }
+            .speech-bubble { font-size: 0.85rem; padding: 8px 12px; }
+            .question-text { font-size: 2.1rem; }
+            .answer-card { padding: 10px; font-size: 1.3rem; }
+            .modal-card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="ui-layer">
+        <!-- Header HUD -->
+        <div class="hud-header glass-panel interactive-ui">
+            <div class="stat-box">
+                <span class="stat-label">Stage</span>
+                <span id="hud-stage" class="stat-value">1 / 10</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Score</span>
+                <span id="hud-score" class="stat-value">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Streak</span>
+                <span id="hud-streak" class="stat-value">🔥 0</span>
+            </div>
+        </div>
+
+        <!-- K-POP IDOL AVATAR & SPEECH BUBBLE (Space Above Question) -->
+        <div class="avatar-stage interactive-ui" id="avatar-stage">
+            <div class="avatar-wrapper">
+                <div class="avatar-ring"></div>
+                <div class="avatar-card">
+                    <!-- SVG K-Pop Idol Avatar Vector Graphic -->
+                    <svg class="avatar-svg" viewBox="0 0 100 100">
+                        <!-- Hair Background -->
+                        <path d="M 20 50 Q 15 15 50 10 Q 85 15 80 50 Q 85 85 80 90 Q 50 95 20 90 Z" fill="#ff007f" />
+                        <!-- Face -->
+                        <ellipse cx="50" cy="50" rx="25" ry="28" fill="#ffe0bd" />
+                        <!-- Eyes -->
+                        <ellipse cx="40" cy="48" rx="3.5" ry="5" fill="#1a0033" />
+                        <ellipse cx="60" cy="48" rx="3.5" ry="5" fill="#1a0033" />
+                        <circle cx="41.5" cy="46" r="1.5" fill="#ffffff" />
+                        <circle cx="61.5" cy="46" r="1.5" fill="#ffffff" />
+                        <!-- Cheeks Blush -->
+                        <ellipse cx="34" cy="55" rx="4" ry="2.5" fill="#ff80b3" opacity="0.6" />
+                        <ellipse cx="66" cy="55" rx="4" ry="2.5" fill="#ff80b3" opacity="0.6" />
+                        <!-- Smile Mouth -->
+                        <path id="avatar-mouth" d="M 43 60 Q 50 67 57 60" fill="none" stroke="#d60052" stroke-width="2.5" stroke-linecap="round" />
+                        <!-- K-Pop Bangs / Hair Front -->
+                        <path d="M 25 35 Q 38 45 50 35 Q 62 45 75 35 Q 65 20 50 18 Q 35 20 25 35 Z" fill="#b000ff" />
+                        <!-- Heart Hair Clip -->
+                        <path d="M 70 28 C 68 25 64 27 66 30 L 70 34 L 74 30 C 76 27 72 25 70 28 Z" fill="#ffe600" />
+                        <!-- Star Earrings -->
+                        <polygon points="21,55 23,58 26,58 24,60 25,63 21,61 17,63 18,60 16,58 19,58" fill="#00f0ff" />
+                        <polygon points="79,55 81,58 84,58 82,60 83,63 79,61 75,63 76,60 74,58 77,58" fill="#00f0ff" />
+                    </svg>
+                </div>
+            </div>
+            <div id="avatar-speech" class="speech-bubble glass-panel">
+                Annyeong! Hwaying! Let's hit the high notes with division facts! 🎤✨
+            </div>
+        </div>
+
+        <!-- Question & Answers Center HUD -->
+        <div class="question-container glass-panel interactive-ui">
+            <div id="question-display" class="question-text">36 ÷ 4 = ?</div>
+
+            <div class="answers-grid" id="answers-container">
+                <!-- Answer cards populated dynamically -->
+            </div>
+
+            <div class="hint-section">
+                <button id="btn-hint" class="btn-hint">💡 Need a Hint? (<span id="hint-level-text">1/2</span>)</button>
+                <div id="hint-display" class="hint-box glass-panel"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Toast -->
+    <div id="feedback-toast">PERFECT BEAT!</div>
+
+    <!-- Start Overlay Modal -->
+    <div id="start-overlay">
+        <div class="modal-card glass-panel">
+            <h1 class="title">K-Pop Math Stage</h1>
+            <p class="subtitle">Master Division Facts (Tables 2 to 9) on the World Tour Stage!</p>
+
+            <div class="table-selector-title">Select Division Tables to Revise</div>
+            <div class="table-grid" id="table-grid">
+                <!-- Buttons 2 through 9 -->
+            </div>
+
+            <button id="btn-start" class="btn-action">START SHOWTIME 🎵</button>
+        </div>
+    </div>
+
+    <!-- Game Over / Results Modal -->
+    <div id="end-overlay" class="hidden">
+        <div class="modal-card glass-panel">
+            <h1 class="title" id="end-title">WORLD TOUR COMPLETE!</h1>
+            <p class="subtitle" id="end-subtitle">You are a certified K-Pop Math Idol!</p>
+
+            <div style="margin: 25px 0;">
+                <div class="stat-label">Final Score</div>
+                <div id="end-score" class="stat-value" style="font-size: 3.5rem; margin-bottom: 10px;">0</div>
+                <div id="end-badge" style="font-size: 1.2rem; font-weight: bold; color: var(--secondary-neon);">Rating: SSS Superstar</div>
+            </div>
+
+            <button id="btn-restart" class="btn-action">PLAY AGAIN ↺</button>
+        </div>
+    </div>
+
+    <!-- Main Logic Script -->
+    <script type="module">
+        import * as THREE from 'three';
+
+        /* =========================================================================
+           AUDIO SYNTHESIZER (Native Web Audio API)
+           Synthesizes background beat, dynamic arpeggios, and sound effects.
+           ========================================================================= */
+        class KPopAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.isPlaying = false;
+                this.bpm = 120;
+                this.step = 0;
+                this.timer = null;
+                // Pentatonic synth scale in C minor
+                this.scale = [261.63, 293.66, 311.13, 392.00, 440.00, 523.25, 587.33, 622.25];
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            startBGM() {
+                this.init();
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                const interval = (60 / this.bpm / 4) * 1000; // 16th notes
+                this.timer = setInterval(() => this.onTick(), interval);
+            }
+
+            stopBGM() {
+                this.isPlaying = false;
+                if (this.timer) clearInterval(this.timer);
+            }
+
+            onTick() {
+                if (!this.ctx || !this.isPlaying) return;
+                const t = this.ctx.currentTime;
+
+                // Four-on-the-floor Kick
+                if (this.step % 4 === 0) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.setValueAtTime(150, t);
+                    osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.15);
+                    gain.gain.setValueAtTime(0.7, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.15);
+                }
+
+                // Synth Bass Line
+                if (this.step % 2 === 0) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    const freq = (this.step % 8 === 0) ? 130.81 : 116.54; // C2 / Bb1
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.15, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.2);
+                }
+
+                // Upbeat Lead Arpeggio
+                if (this.step % 2 === 1) {
+                    const note = this.scale[(this.step * 3) % this.scale.length];
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(note, t);
+                    gain.gain.setValueAtTime(0.08, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.1);
+                }
+
+                this.step = (this.step + 1) % 16;
+            }
+
+            playCorrectSFX() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C Major Chord sweep
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, t + idx * 0.06);
+                    gain.gain.setValueAtTime(0.2, t + idx * 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.06 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t + idx * 0.06);
+                    osc.stop(t + idx * 0.06 + 0.25);
+                });
+            }
+
+            playIncorrectSFX() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, t);
+                osc.frequency.linearRampToValueAtTime(90, t + 0.3);
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.3);
+            }
+
+            playClickSFX() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.frequency.setValueAtTime(800, t);
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.05);
+            }
+        }
+
+        /* =========================================================================
+           THREE.JS GRAPHICS SCENE
+           Creates the 3D K-Pop Stage, Dancer Mascot, Floating Platforms & Lighting
+           ========================================================================= */
+        class StageGraphicsEngine {
+            constructor(container) {
+                this.container = container;
+                this.scene = new THREE.Scene();
+                this.scene.fog = new THREE.FogExp2(0x0a0518, 0.035);
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 3.5, 9);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                container.appendChild(this.renderer.domElement);
+
+                this.platforms = [];
+                this.spotlights = [];
+                this.clock = new THREE.Clock();
+
+                this.buildLighting();
+                this.buildStage();
+                this.buildCharacter();
+                this.buildParticles();
+
+                window.addEventListener('resize', () => this.onWindowResize());
+            }
+
+            buildLighting() {
+                const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+                this.scene.add(ambient);
+
+                // Neon Colored Spotlights
+                const colors = [0xff007f, 0x00f0ff, 0xffe600];
+                colors.forEach((col, i) => {
+                    const spot = new THREE.SpotLight(col, 5);
+                    spot.position.set((i - 1) * 6, 8, -2);
+                    spot.angle = Math.PI / 6;
+                    spot.penumbra = 0.8;
+                    spot.castShadow = true;
+                    this.scene.add(spot);
+                    this.spotlights.push(spot);
+                });
+            }
+
+            buildStage() {
+                // Main Floor Stage (Reflective Dark Glass Circle)
+                const stageGeo = new THREE.CylinderGeometry(5.5, 6, 0.5, 32);
+                const stageMat = new THREE.MeshStandardMaterial({
+                    color: 0x120826,
+                    roughness: 0.1,
+                    metalness: 0.8,
+                });
+                const stage = new THREE.Mesh(stageGeo, stageMat);
+                stage.position.set(0, -0.25, 0);
+                stage.receiveShadow = true;
+                this.scene.add(stage);
+
+                // Stage Neon Outer Ring
+                const ringGeo = new THREE.TorusGeometry(5.6, 0.08, 16, 64);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = 0.01;
+                this.scene.add(ring);
+
+                // Answer Platforms floating in front
+                const platGeo = new THREE.BoxGeometry(1.6, 0.3, 1.6);
+                for (let i = 0; i < 4; i++) {
+                    const platMat = new THREE.MeshStandardMaterial({
+                        color: 0x1f103c,
+                        emissive: 0xff007f,
+                        emissiveIntensity: 0.2,
+                        roughness: 0.2,
+                        metalness: 0.5
+                    });
+                    const plat = new THREE.Mesh(platGeo, platMat);
+                    plat.position.set((i - 1.5) * 2.2, 0.5, 3.5);
+                    plat.castShadow = true;
+                    plat.receiveShadow = true;
+                    this.scene.add(plat);
+                    this.platforms.push(plat);
+                }
+            }
+
+            buildCharacter() {
+                // K-Pop Mascot Character (Stylized Android/Figure)
+                this.characterGroup = new THREE.Group();
+
+                // Head / Visor
+                const headGeo = new THREE.SphereGeometry(0.35, 32, 32);
+                const headMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1 });
+                const head = new THREE.Mesh(headGeo, headMat);
+                head.position.y = 1.6;
+
+                const visorGeo = new THREE.BoxGeometry(0.4, 0.15, 0.25);
+                const visorMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+                const visor = new THREE.Mesh(visorGeo, visorMat);
+                visor.position.set(0, 1.65, 0.2);
+
+                // Body
+                const bodyGeo = new THREE.CylinderGeometry(0.25, 0.15, 0.7, 16);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff007f, metalness: 0.5, roughness: 0.3 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = 1.0;
+
+                // Cute Headphones
+                const hpGeo = new THREE.TorusGeometry(0.38, 0.05, 12, 24);
+                const hpMat = new THREE.MeshBasicMaterial({ color: 0xffe600 });
+                const hp = new THREE.Mesh(hpGeo, hpMat);
+                hp.position.y = 1.65;
+
+                this.characterGroup.add(head);
+                this.characterGroup.add(visor);
+                this.characterGroup.add(body);
+                this.characterGroup.add(hp);
+
+                this.characterGroup.position.set(0, 0.25, 0);
+                this.scene.add(this.characterGroup);
+            }
+
+            buildParticles() {
+                const count = 200;
+                const geo = new THREE.BufferGeometry();
+                const pos = new Float32Array(count * 3);
+                for (let i = 0; i < count * 3; i += 3) {
+                    pos[i] = (Math.random() - 0.5) * 20;
+                    pos[i+1] = Math.random() * 10;
+                    pos[i+2] = (Math.random() - 0.5) * 20;
+                }
+                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                const mat = new THREE.PointsMaterial({
+                    size: 0.08,
+                    color: 0x00f0ff,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                this.particles = new THREE.Points(geo, mat);
+                this.scene.add(this.particles);
+            }
+
+            jumpCharacterTo(platformIdx, callback) {
+                const targetX = (platformIdx - 1.5) * 2.2;
+                const targetZ = 3.5;
+                const startX = this.characterGroup.position.x;
+                const startZ = this.characterGroup.position.z;
+                let progress = 0;
+
+                const animateJump = () => {
+                    progress += 0.05;
+                    if (progress <= 1) {
+                        this.characterGroup.position.x = THREE.MathUtils.lerp(startX, targetX, progress);
+                        this.characterGroup.position.z = THREE.MathUtils.lerp(startZ, targetZ, progress);
+                        this.characterGroup.position.y = 0.25 + Math.sin(progress * Math.PI) * 1.5; // Jump arc
+                        requestAnimationFrame(animateJump);
+                    } else {
+                        this.characterGroup.position.set(targetX, 0.5, targetZ);
+                        if (callback) callback();
+                    }
+                };
+                animateJump();
+            }
+
+            resetCharacterPosition() {
+                this.characterGroup.position.set(0, 0.25, 0);
+            }
+
+            triggerStageCelebration() {
+                // Rapidly pulse spotlights
+                this.spotlights.forEach(spot => {
+                    spot.intensity = 15;
+                    setTimeout(() => spot.intensity = 5, 400);
+                });
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            render() {
+                const elapsedTime = this.clock.getElapsedTime();
+
+                // Dance animation idle (subtle bounce & bobbing)
+                if (this.characterGroup.position.y <= 0.3) {
+                    this.characterGroup.position.y = 0.25 + Math.sin(elapsedTime * 6) * 0.05;
+                    this.characterGroup.rotation.y = Math.sin(elapsedTime * 3) * 0.15;
+                }
+
+                // Spotlight swinging
+                this.spotlights.forEach((spot, i) => {
+                    spot.position.x = (i - 1) * 6 + Math.sin(elapsedTime * 2 + i) * 1.5;
+                });
+
+                // Particle drift
+                if (this.particles) {
+                    this.particles.rotation.y = elapsedTime * 0.03;
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        /* =========================================================================
+           PEDAGOGICAL & GAMEPLAY CONTROLLER
+           Handles Math Division Dynamic Generation, Scaffolded Hints, Game Loop
+           ========================================================================= */
+        class KPopMathGame {
+            constructor() {
+                this.selectedTables = [2, 3, 4, 5, 6, 7, 8, 9];
+                this.currentRound = 1;
+                this.maxRounds = 10;
+                this.score = 0;
+                this.streak = 0;
+                this.currentQuestion = null;
+                this.currentHintTier = 0;
+
+                this.correctPraiseMessages = [
+                    "Daebak! 🔥 Perfect beat and perfect division!",
+                    "Superstar move! You hit that high note! 🎤✨",
+                    "Spotlight is on you! Flawless math choreography! 💃",
+                    "Center Stage performance! Keep slaying! 🌟",
+                    "All-Kill! You smashed that division question! 🏆"
+                ];
+
+                this.motivationalMessages = [
+                    "Hwaying! ✊ You'll hit the right beat next time!",
+                    "Don't stop the rhythm! Check the hint and try again! 🎵",
+                    "Idols learn from every stage! Keep your chin up! 💪",
+                    "Almost got it! Keep up the idol energy! ✨",
+                    "Practice makes a World Superstar! Fighting! 🔥"
+                ];
+
+                this.audio = new KPopAudioEngine();
+                this.graphics = new StageGraphicsEngine(document.getElementById('canvas-container'));
+
+                this.initUI();
+                this.loop();
+            }
+
+            initUI() {
+                // Table Selector Grid Setup
+                const grid = document.getElementById('table-grid');
+                for (let i = 2; i <= 9; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'table-btn selected';
+                    btn.innerText = `÷ ${i}`;
+                    btn.dataset.table = i;
+                    btn.onclick = () => {
+                        this.audio.playClickSFX();
+                        btn.classList.toggle('selected');
+                        const val = parseInt(btn.dataset.table);
+                        if (this.selectedTables.includes(val)) {
+                            this.selectedTables = this.selectedTables.filter(t => t !== val);
+                        } else {
+                            this.selectedTables.push(val);
+                        }
+                    };
+                    grid.appendChild(btn);
+                }
+
+                document.getElementById('btn-start').onclick = () => {
+                    if (this.selectedTables.length === 0) {
+                        alert('Please select at least one division table to revise!');
+                        return;
+                    }
+                    this.audio.playClickSFX();
+                    this.audio.startBGM();
+                    document.getElementById('start-overlay').classList.add('hidden');
+                    this.startNewGame();
+                };
+
+                document.getElementById('btn-restart').onclick = () => {
+                    this.audio.playClickSFX();
+                    document.getElementById('end-overlay').classList.add('hidden');
+                    document.getElementById('start-overlay').classList.remove('hidden');
+                };
+
+                document.getElementById('btn-hint').onclick = () => {
+                    this.audio.playClickSFX();
+                    this.showNextHint();
+                };
+            }
+
+            startNewGame() {
+                this.currentRound = 1;
+                this.score = 0;
+                this.streak = 0;
+                this.updateHUD();
+                this.nextQuestion();
+            }
+
+            generateDivisionQuestion() {
+                // Randomly select divisor from user selection
+                const divisor = this.selectedTables[Math.floor(Math.random() * this.selectedTables.length)];
+                // Quotient between 1 and 12
+                const quotient = Math.floor(Math.random() * 12) + 1;
+                const dividend = divisor * quotient;
+
+                // Distractors generation
+                const answers = new Set([quotient]);
+                while (answers.size < 4) {
+                    let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
+                    let wrong = quotient + offset;
+                    if (wrong > 0 && wrong !== quotient) {
+                        answers.add(wrong);
+                    }
+                }
+
+                const options = Array.from(answers).sort(() => Math.random() - 0.5);
+
+                return {
+                    dividend,
+                    divisor,
+                    correctAnswer: quotient,
+                    options,
+                    hints: [
+                        `Think of sharing <b>${dividend}</b> items equally into <b>${divisor}</b> groups. How many items per group?`,
+                        `Inverse Multiplication Rule: What number multiplied by <b>${divisor}</b> equals <b>${dividend}</b>? ( ? × ${divisor} = ${dividend} )`
+                    ]
+                };
+            }
+
+            nextQuestion() {
+                this.graphics.resetCharacterPosition();
+                this.currentHintTier = 0;
+                document.getElementById('hint-display').classList.remove('active');
+                document.getElementById('hint-level-text').innerText = `1/2`;
+
+                // Reset avatar stage animation state
+                const avatarStage = document.getElementById('avatar-stage');
+                avatarStage.className = 'avatar-stage interactive-ui';
+
+                this.currentQuestion = this.generateDivisionQuestion();
+
+                document.getElementById('question-display').innerHTML = `${this.currentQuestion.dividend} ÷ ${this.currentQuestion.divisor} = ?`;
+
+                const container = document.getElementById('answers-container');
+                container.innerHTML = '';
+
+                this.currentQuestion.options.forEach((opt, idx) => {
+                    const card = document.createElement('div');
+                    card.className = 'answer-card glass-panel';
+                    card.innerText = opt;
+                    card.onclick = () => this.handleAnswerSelection(opt, idx);
+                    container.appendChild(card);
+                });
+
+                this.updateHUD();
+            }
+
+            handleAnswerSelection(selectedAnswer, platformIdx) {
+                const isCorrect = selectedAnswer === this.currentQuestion.correctAnswer;
+                const avatarStage = document.getElementById('avatar-stage');
+                const speechBubble = document.getElementById('avatar-speech');
+                const mouth = document.getElementById('avatar-mouth');
+
+                this.graphics.jumpCharacterTo(platformIdx, () => {
+                    if (isCorrect) {
+                        this.audio.playCorrectSFX();
+                        this.graphics.triggerStageCelebration();
+                        this.score += 100 + (this.streak * 20);
+                        this.streak++;
+                        this.showToast("PERFECT BEAT! ✨", "correct");
+
+                        // K-Pop Avatar Congratulate Reaction
+                        avatarStage.className = 'avatar-stage interactive-ui correct';
+                        const msg = this.correctPraiseMessages[Math.floor(Math.random() * this.correctPraiseMessages.length)];
+                        speechBubble.innerText = msg;
+                        if (mouth) mouth.setAttribute('d', 'M 40 58 Q 50 70 60 58 Z'); // Wide happy open mouth
+                    } else {
+                        this.audio.playIncorrectSFX();
+                        this.streak = 0;
+                        this.showToast("OFF BEAT! ❌", "incorrect");
+
+                        // K-Pop Avatar Motivate Reaction
+                        avatarStage.className = 'avatar-stage interactive-ui incorrect';
+                        const msg = this.motivationalMessages[Math.floor(Math.random() * this.motivationalMessages.length)];
+                        speechBubble.innerText = msg;
+                        if (mouth) mouth.setAttribute('d', 'M 43 64 Q 50 58 57 64'); // Supportive slight curve
+                    }
+
+                    setTimeout(() => {
+                        if (mouth) mouth.setAttribute('d', 'M 43 60 Q 50 67 57 60'); // Reset smile
+                        if (this.currentRound < this.maxRounds) {
+                            this.currentRound++;
+                            this.nextQuestion();
+                        } else {
+                            this.endGame();
+                        }
+                    }, 1400);
+                });
+            }
+
+            showNextHint() {
+                if (!this.currentQuestion) return;
+                const hintBox = document.getElementById('hint-display');
+
+                if (this.currentHintTier < this.currentQuestion.hints.length) {
+                    hintBox.innerHTML = this.currentQuestion.hints[this.currentHintTier];
+                    hintBox.classList.add('active');
+                    this.currentHintTier++;
+                    document.getElementById('hint-level-text').innerText = `${Math.min(this.currentHintTier + 1, 2)}/2`;
+                }
+            }
+
+            showToast(text, statusClass) {
+                const toast = document.getElementById('feedback-toast');
+                toast.innerText = text;
+                toast.className = `${statusClass}`;
+                setTimeout(() => {
+                    toast.className = '';
+                }, 1000);
+            }
+
+            updateHUD() {
+                document.getElementById('hud-stage').innerText = `${this.currentRound} / ${this.maxRounds}`;
+                document.getElementById('hud-score').innerText = this.score;
+                document.getElementById('hud-streak').innerText = `🔥 ${this.streak}`;
+            }
+
+            endGame() {
+                document.getElementById('end-score').innerText = this.score;
+
+                let rating = 'S Rank Idol';
+                if (this.score >= 1200) rating = '👑 SSS World Superstar';
+                else if (this.score >= 900) rating = '🌟 SS Platinum Lead Singer';
+                else if (this.score >= 600) rating = '🎤 A Rank Main Dancer';
+                else rating = '🎵 Trainee Idol';
+
+                document.getElementById('end-badge').innerText = `Performance Rating: ${rating}`;
+                document.getElementById('end-overlay').classList.remove('hidden');
+            }
+
+            loop() {
+                requestAnimationFrame(() => this.loop());
+                this.graphics.render();
+            }
+        }
+
+        // Initialize App on DOM Load
+        window.addEventListener('DOMContentLoaded', () => {
+            new KPopMathGame();
+        });
+    </script>
+</body>
+</html>
