@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cybertron Decimal Mission: P6 Math Revision</title>
+    <style>
+        :root {
+            --autobot-red: #d32f2f;
+            --autobot-blue: #1976d2;
+            --autobot-yellow: #fbc02d;
+            --energon-pink: #ff007f;
+            --cyber-dark: #0a0e17;
+            --cyber-panel: #161d2f;
+            --cyber-glow: #00f0ff;
+            --text-light: #ffffff;
+            --success-green: #2e7d32;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--cyber-dark);
+            color: var(--text-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.1) 0%, transparent 60%),
+                linear-gradient(rgba(10, 14, 23, 0.95), rgba(10, 14, 23, 0.95));
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
+            background-color: var(--cyber-panel);
+            border: 3px solid var(--autobot-blue);
+            border-radius: 12px;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--autobot-red), var(--energon-pink), var(--cyber-glow));
+        }
+
+        /* Avatar Section */
+        .avatar-frame {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .avatar-svg {
+            width: 90px;
+            height: 90px;
+            filter: drop-shadow(0 0 10px var(--cyber-glow));
+            transition: transform 0.3s ease;
+        }
+
+        .avatar-name {
+            font-size: 0.9rem;
+            color: var(--autobot-yellow);
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        /* Avatar Animations */
+        .anim-correct {
+            animation: celebrate 0.8s ease-in-out;
+        }
+
+        .anim-wrong {
+            animation: glitchShake 0.5s ease-in-out;
+        }
+
+        @keyframes celebrate {
+            0% { transform: scale(1) translateY(0); }
+            30% { transform: scale(1.25) translateY(-12px) rotate(5deg); filter: drop-shadow(0 0 20px var(--energon-pink)); }
+            60% { transform: scale(1.1) translateY(0) rotate(-5deg); }
+            100% { transform: scale(1) translateY(0); }
+        }
+
+        @keyframes glitchShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px) rotate(-4deg); filter: drop-shadow(0 0 15px var(--autobot-red)); }
+            40% { transform: translateX(10px) rotate(4deg); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: var(--autobot-yellow);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(251, 192, 45, 0.5);
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            color: var(--cyber-glow);
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 1.05rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            color: #d1d5db;
+        }
+
+        .badge {
+            background-color: rgba(25, 118, 210, 0.3);
+            border: 1px solid var(--autobot-blue);
+            color: var(--cyber-glow);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        /* Stats Bar */
+        .quiz-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .energon-counter {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--energon-pink);
+            text-shadow: 0 0 8px var(--energon-pink);
+        }
+
+        .cube-icon {
+            width: 18px;
+            height: 18px;
+            background: var(--energon-pink);
+            transform: rotate(45deg);
+            box-shadow: 0 0 8px var(--energon-pink);
+            display: inline-block;
+        }
+
+        .timer-display {
+            color: var(--autobot-yellow);
+            position: relative;
+        }
+
+        .penalty-pop {
+            position: absolute;
+            right: 0;
+            top: -20px;
+            color: #f44336;
+            font-weight: bold;
+            font-size: 1.1rem;
+            animation: fadeUp 1s forwards;
+        }
+
+        @keyframes fadeUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-15px); }
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--autobot-blue), var(--cyber-glow));
+            transition: width 0.3s ease;
+        }
+
+        /* Question Box */
+        .question-card {
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--cyber-glow);
+            border-radius: 8px;
+            padding: 20px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .question-text {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffffff;
+            letter-spacing: 1px;
+        }
+
+        /* Options */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 480px) {
+            .options-grid { grid-template-columns: 1fr; }
+        }
+
+        .option-btn {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 14px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option-btn:hover {
+            background-color: rgba(0, 240, 255, 0.1);
+            border-color: var(--cyber-glow);
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-green) !important;
+            border-color: #4caf50 !important;
+            box-shadow: 0 0 15px var(--energon-pink);
+        }
+
+        .option-btn.wrong {
+            background-color: #b71c1c !important;
+            border-color: #f44336 !important;
+            opacity: 0.6;
+        }
+
+        .hint-box {
+            display: none;
+            background-color: rgba(25, 118, 210, 0.2);
+            border-left: 4px solid var(--autobot-yellow);
+            padding: 12px;
+            border-radius: 4px;
+            width: 100%;
+            text-align: left;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+        .hint-box.active { display: block; }
+
+        .hint-title {
+            color: var(--autobot-yellow);
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--autobot-red), #b71c1c);
+            color: white;
+            border: 2px solid var(--autobot-yellow);
+            padding: 12px 26px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(251, 192, 45, 0.6);
+        }
+
+        /* Floating Energon Cube Shower */
+        .floating-cube {
+            position: fixed;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #ff007f, #ff66cc);
+            box-shadow: 0 0 12px #ff007f;
+            transform: rotate(45deg);
+            pointer-events: none;
+            z-index: 1000;
+            animation: floatDown 1.5s linear forwards;
+        }
+
+        @keyframes floatDown {
+            0% { opacity: 1; transform: translateY(-50px) rotate(45deg) scale(0.8); }
+            100% { opacity: 0; transform: translateY(80vh) rotate(225deg) scale(1.2); }
+        }
+
+        /* Completion Screen */
+        .results-box {
+            background: rgba(0,0,0,0.4);
+            border: 2px solid var(--autobot-yellow);
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        .stat-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Top Transformer Avatar Container -->
+    <div class="avatar-frame">
+        <div id="avatar-svg-container"></div>
+        <div id="avatar-name" class="avatar-name">Optimus Prime</div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="screen active">
+        <div class="badge">Singapore P6 Foundation Math Revision</div>
+        <h1>Cybertron Decimals</h1>
+        <h2>Speed Revision Mission</h2>
+        <p>Autobots! Help us recalibrate Cybertron's power grid. Move decimal points quickly to earn <strong>Energon Cubes</strong>!</p>
+        <p>⚡ <strong>Warning:</strong> Each wrong answer incurs a <strong>+5 SECOND PENALTY</strong>!</p>
+        <button class="btn" onclick="startQuiz()">Roll Out!</button>
+    </div>
+
+    <!-- QUIZ SCREEN -->
+    <div id="quiz-screen" class="screen">
+        <div class="quiz-header">
+            <span id="question-tracker">Q1/8</span>
+            <div class="energon-counter">
+                <span class="cube-icon"></span>
+                <span id="energon-score">0 CUBES</span>
+            </div>
+            <div class="timer-display">
+                ⏱️ <span id="timer-text">0.0s</span>
+                <span id="penalty-pop-container"></span>
+            </div>
+        </div>
+
+        <div class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <div class="question-card">
+            <div id="question-text" class="question-text">3.4 × 10 = ?</div>
+        </div>
+
+        <div id="options-container" class="options-grid"></div>
+
+        <div id="hint-box" class="hint-box">
+            <div id="hint-title" class="hint-title">🤖 Tactical Hint:</div>
+            <div id="hint-text">Remember to move the decimal point to the right!</div>
+        </div>
+
+        <button id="next-btn" class="btn" style="display: none;" onclick="nextQuestion()">Next Decryption &rarr;</button>
+    </div>
+
+    <!-- COMPLETION SCREEN -->
+    <div id="completion-screen" class="screen">
+        <h1>Mission Complete!</h1>
+        
+        <div class="results-box">
+            <div class="stat-line">
+                <span>Accuracy:</span>
+                <strong id="final-accuracy" style="color: var(--cyber-glow);">8/8</strong>
+            </div>
+            <div class="stat-line">
+                <span>Errors Made:</span>
+                <strong id="final-errors" style="color: #f44336;">0 (+0s penalty)</strong>
+            </div>
+            <div class="stat-line">
+                <span>Total Mission Time:</span>
+                <strong id="final-time" style="color: var(--autobot-yellow);">0.0s</strong>
+            </div>
+            <div class="stat-line">
+                <span>Energon Cubes Secured:</span>
+                <strong id="final-energon" style="color: var(--energon-pink);">8 Cubes</strong>
+            </div>
+        </div>
+
+        <div id="rank-title" style="font-size: 1.4rem; color: var(--autobot-yellow); font-weight: bold; margin-bottom: 10px;">Rank: Prime Leader 🏆</div>
+        <p id="completion-message">Outstanding math skills! You've restored full energy to Cybertron!</p>
+
+        <button class="btn" onclick="restartQuiz()">Replay Mission</button>
+    </div>
+</div>
+
+<script>
+    // Web Audio API Synthesizer for SFX
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioCtx();
+    }
+
+    function playSFX(type) {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (type === 'correct') {
+            // Futuristic double beep
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, now); // D5
+            osc.frequency.setValueAtTime(880, now + 0.1); // A5
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'wrong') {
+            // Low error buzz
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(80, now + 0.25);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        } else if (type === 'victory') {
+            // Triumph Fanfare
+            [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                gain.gain.setValueAtTime(0.25, now + idx * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + idx * 0.12);
+                osc.stop(now + idx * 0.12 + 0.3);
+            });
+        }
+    }
+
+    // Transformer Avatars SVG graphics
+    const avatars = [
+        {
+            name: "Optimus Prime",
+            color: "#d32f2f",
+            svg: `<svg class="avatar-svg" viewBox="0 0 100 100">
+                    <rect x="25" y="25" width="50" height="50" rx="5" fill="#1976d2" stroke="#d32f2f" stroke-width="4"/>
+                    <rect x="30" y="35" width="40" height="12" fill="#00f0ff"/>
+                    <rect x="35" y="55" width="30" height="15" fill="#fbc02d"/>
+                    <path d="M 20 25 L 30 10 L 40 25 Z" fill="#d32f2f"/>
+                    <path d="M 80 25 L 70 10 L 60 25 Z" fill="#d32f2f"/>
+                  </svg>`
+        },
+        {
+            name: "Bumblebee",
+            color: "#fbc02d",
+            svg: `<svg class="avatar-svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="30" fill="#fbc02d" stroke="#111" stroke-width="4"/>
+                    <rect x="30" y="40" width="12" height="10" fill="#00f0ff"/>
+                    <rect x="58" y="40" width="12" height="10" fill="#00f0ff"/>
+                    <path d="M 40 60 Q 50 70 60 60" stroke="#111" stroke-width="4" fill="none"/>
+                    <rect x="45" y="20" width="10" height="12" fill="#111"/>
+                  </svg>`
+        },
+        {
+            name: "Grimlock",
+            color: "#757575",
+            svg: `<svg class="avatar-svg" viewBox="0 0 100 100">
+                    <polygon points="25,75 50,25 75,75" fill="#757575" stroke="#fbc02d" stroke-width="4"/>
+                    <rect x="38" y="45" width="24" height="8" fill="#ff007f"/>
+                    <circle cx="50" cy="30" r="6" fill="#fbc02d"/>
+                  </svg>`
+        },
+        {
+            name: "Megatron",
+            color: "#9e9e9e",
+            svg: `<svg class="avatar-svg" viewBox="0 0 100 100">
+                    <rect x="25" y="25" width="50" height="50" fill="#9e9e9e" stroke="#212121" stroke-width="4"/>
+                    <rect x="32" y="40" width="36" height="8" fill="#d32f2f"/>
+                    <path d="M 15 35 L 25 35 L 25 65 L 15 65 Z" fill="#212121"/>
+                    <path d="M 30 15 L 50 25 L 70 15 Z" fill="#757575"/>
+                  </svg>`
+        }
+    ];
+
+    // Quiz Questions (Singapore P6 Foundation Math standard)
+    const questions = [
+        { question: "3.4 × 10 = ?", options: ["0.34", "34", "340", "3.40"], correct: 1, hint: "Multiplying by 10 makes the number BIGGER. Move the decimal point 1 step to the RIGHT." },
+        { question: "52.8 ÷ 10 = ?", options: ["5.28", "528", "0.528", "52.80"], correct: 0, hint: "Dividing by 10 makes the number SMALLER. Move the decimal point 1 step to the LEFT." },
+        { question: "0.67 × 100 = ?", options: ["6.7", "670", "67", "0.0067"], correct: 2, hint: "Multiplying by 100 (2 zeros) moves decimal point 2 steps RIGHT." },
+        { question: "145.2 ÷ 100 = ?", options: ["14.52", "1.452", "0.1452", "1452"], correct: 1, hint: "Dividing by 100 (2 zeros) moves decimal point 2 steps LEFT." },
+        { question: "8.19 × 1000 = ?", options: ["819", "8190", "81900", "81.9"], correct: 1, hint: "Multiplying by 1000 moves decimal point 3 steps RIGHT. Fill empty space with a zero (8.190 → 8190)." },
+        { question: "630 ÷ 1000 = ?", options: ["63", "6.3", "0.63", "0.063"], correct: 2, hint: "Dividing 630 by 1000 moves decimal point 3 steps LEFT (630.0 → 0.630 = 0.63)." },
+        { question: "0.05 × 100 = ?", options: ["0.5", "5", "50", "500"], correct: 1, hint: "Multiplying by 100 moves decimal point 2 steps RIGHT (0.05 → 005. = 5)." },
+        { question: "7 ÷ 1000 = ?", options: ["0.7", "0.07", "0.007", "7000"], correct: 2, hint: "Dividing by 1000 moves decimal point 3 steps LEFT. Fill in extra spaces with zeros (7.0 → 0.007)." }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let totalErrors = 0;
+    let answered = false;
+    let timerInterval = null;
+    let startTime = 0;
+    let elapsedTime = 0;
+    let currentAvatar = null;
+
+    // Initialize Random Avatar on start
+    function setRandomAvatar() {
+        currentAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+        const container = document.getElementById('avatar-svg-container');
+        container.innerHTML = currentAvatar.svg;
+        document.getElementById('avatar-name').innerText = currentAvatar.name;
+    }
+
+    function animateAvatar(type) {
+        const svg = document.querySelector('.avatar-svg');
+        if (!svg) return;
+        svg.classList.remove('anim-correct', 'anim-wrong');
+        void svg.offsetWidth; // Trigger reflow
+        if (type === 'correct') {
+            svg.classList.add('anim-correct');
+        } else {
+            svg.classList.add('anim-wrong');
+        }
+    }
+
+    function startQuiz() {
+        initAudio();
+        document.getElementById('start-screen').classList.remove('active');
+        document.getElementById('quiz-screen').classList.add('active');
+        
+        currentQuestionIndex = 0;
+        score = 0;
+        totalErrors = 0;
+        elapsedTime = 0;
+
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 100);
+
+        setRandomAvatar();
+        loadQuestion();
+    }
+
+    function updateTimer() {
+        const now = Date.now();
+        const diffInSeconds = (now - startTime) / 1000;
+        const total = diffInSeconds + elapsedTime;
+        document.getElementById('timer-text').innerText = `${total.toFixed(1)}s`;
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = questions[currentQuestionIndex];
+        
+        document.getElementById('question-tracker').innerText = `Q${currentQuestionIndex + 1}/${questions.length}`;
+        document.getElementById('energon-score').innerText = `${score} CUBES`;
+        
+        const progressPercent = (currentQuestionIndex / questions.length) * 100;
+        document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+        document.getElementById('question-text').innerText = q.question;
+        document.getElementById('hint-box').classList.remove('active');
+        document.getElementById('next-btn').style.display = 'none';
+
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+
+        q.options.forEach((optionText, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = optionText;
+            btn.onclick = () => selectOption(index, btn);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function selectOption(selectedIndex, selectedBtn) {
+        if (answered) return;
+
+        const q = questions[currentQuestionIndex];
+
+        if (selectedIndex === q.correct) {
+            // Correct Answer
+            answered = true;
+            selectedBtn.classList.add('correct');
+            score++;
+            document.getElementById('energon-score').innerText = `${score} CUBES`;
+            
+            playSFX('correct');
+            animateAvatar('correct');
+            triggerEnergonShower();
+
+            document.getElementById('next-btn').style.display = 'block';
+        } else {
+            // Incorrect Answer: Apply +5s Penalty
+            totalErrors++;
+            elapsedTime += 5; // Penalty addition
+            
+            selectedBtn.classList.add('wrong');
+            playSFX('wrong');
+            animateAvatar('wrong');
+
+            // Visual penalty warning
+            showPenaltyPop();
+
+            // Display Tactical Hint
+            document.getElementById('hint-title').innerText = `🤖 ${currentAvatar.name} Tactical Hint:`;
+            document.getElementById('hint-text').innerText = q.hint;
+            document.getElementById('hint-box').classList.add('active');
+        }
+    }
+
+    function showPenaltyPop() {
+        const container = document.getElementById('penalty-pop-container');
+        container.innerHTML = `<span class="penalty-pop">+5s</span>`;
+        setTimeout(() => { container.innerHTML = ''; }, 1000);
+    }
+
+    function triggerEnergonShower() {
+        for (let i = 0; i < 8; i++) {
+            const cube = document.createElement('div');
+            cube.className = 'floating-cube';
+            cube.style.left = `${Math.random() * 80 + 10}vw`;
+            cube.style.animationDelay = `${Math.random() * 0.3}s`;
+            document.body.appendChild(cube);
+            setTimeout(() => cube.remove(), 1500);
+        }
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.length) {
+            // Switch avatar occasionally for variety
+            if (Math.random() > 0.5) setRandomAvatar();
+            loadQuestion();
+        } else {
+            showCompletionScreen();
+        }
+    }
+
+    function showCompletionScreen() {
+        clearInterval(timerInterval);
+        playSFX('victory');
+
+        document.getElementById('quiz-screen').classList.remove('active');
+        document.getElementById('completion-screen').classList.add('active');
+
+        const finalTimeVal = ((Date.now() - startTime) / 1000 + elapsedTime).toFixed(1);
+
+        document.getElementById('final-accuracy').innerText = `${score}/${questions.length}`;
+        document.getElementById('final-errors').innerText = `${totalErrors} (+${totalErrors * 5}s penalty)`;
+        document.getElementById('final-time').innerText = `${finalTimeVal}s`;
+        document.getElementById('final-energon').innerText = `${score} Cubes`;
+
+        const rankTitle = document.getElementById('rank-title');
+        const completionMsg = document.getElementById('completion-message');
+
+        if (score === questions.length && finalTimeVal < 35) {
+            rankTitle.innerText = "Rank: Supreme Prime Leader 🏆";
+            completionMsg.innerText = "Lightning fast speed and perfect decimal accuracy! Cybertron is saved!";
+        } else if (score >= 6) {
+            rankTitle.innerText = "Rank: Veteran Autobot 🛡️";
+            completionMsg.innerText = "Solid job! You've mastered moving decimal points under pressure.";
+        } else {
+            rankTitle.innerText = "Rank: Cadet Autobot 🔧";
+            completionMsg.innerText = "Good try! Watch out for error penalties and keep practicing moving decimal points!";
+        }
+    }
+
+    function restartQuiz() {
+        document.getElementById('completion-screen').classList.remove('active');
+        startQuiz();
+    }
+
+    // Set initial avatar on page load
+    setRandomAvatar();
+</script>
+
+</body>
+</html>
