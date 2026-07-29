@@ -45,7 +45,7 @@
             position: relative;
         }
 
-        /* Avatar / Idol Frame */
+        /* Avatar Frame */
         .idol-frame {
             display: flex;
             flex-direction: column;
@@ -112,6 +112,38 @@
             font-size: 0.85rem;
             margin-bottom: 15px;
             display: inline-block;
+        }
+
+        /* Difficulty Selection Controls */
+        .difficulty-selector {
+            display: flex;
+            gap: 12px;
+            margin: 15px 0 20px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .diff-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 105, 180, 0.5);
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .diff-btn:hover {
+            background: rgba(255, 105, 180, 0.3);
+            border-color: #ff69b4;
+        }
+
+        .diff-btn.selected {
+            background: linear-gradient(135deg, #ff1493, #8a2be2);
+            border-color: #ffffff;
+            box-shadow: 0 0 15px rgba(255, 20, 147, 0.6);
         }
 
         /* Stats Bar */
@@ -205,7 +237,7 @@
             color: #2e7d32;
         }
 
-        /* Hint Box */
+        /* Method Hint Box */
         .hint-box {
             display: none;
             background: rgba(138, 43, 226, 0.25);
@@ -247,7 +279,6 @@
             box-shadow: 0 0 20px rgba(255, 105, 180, 0.8);
         }
 
-        /* Completion Results */
         .results-box {
             background: rgba(0, 0, 0, 0.3);
             border: 2px solid var(--kpop-pink);
@@ -263,22 +294,12 @@
             margin: 10px 0;
             font-size: 1.1rem;
         }
-
-        /* Animations */
-        .anim-celebrate {
-            animation: heartBounce 0.8s ease-in-out;
-        }
-
-        @keyframes heartBounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2) rotate(5deg); }
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- Top Idol Leader Avatar Frame -->
+    <!-- Top Idol Frame -->
     <div class="idol-frame">
         <div id="idol-svg-container"></div>
         <div id="idol-name" class="idol-name">Mina (Vocal Leader)</div>
@@ -289,8 +310,15 @@
         <div class="badge">Singapore P6 Foundation Math Revision</div>
         <h1>K-Pop Idol Academy</h1>
         <h2>Value Match Audition</h2>
-        <p>Welcome Trainee! Match equivalent <strong>Percentages</strong>, <strong>Decimals</strong>, and <strong>Fractions (Simplest Form)</strong> to clear your debut evaluation!</p>
-        <p>✨ Complete the match board in as few <strong>Attempts</strong> and as fast a <strong>Time</strong> as possible!</p>
+        <p>Match equivalent <strong>Percentages</strong>, <strong>Decimals</strong>, and <strong>Fractions (Simplest Form)</strong>!</p>
+        
+        <p>Select your debut difficulty level:</p>
+        <div class="difficulty-selector">
+            <button class="diff-btn selected" onclick="selectDifficulty('beginner', this)">Beginner 🌸</button>
+            <button class="diff-btn" onclick="selectDifficulty('intermediate', this)">Intermediate ⚡</button>
+            <button class="diff-btn" onclick="selectDifficulty('advanced', this)">Advanced 🔥</button>
+        </div>
+
         <button class="btn" onclick="startGame()">Start Audition! 🎤</button>
     </div>
 
@@ -314,8 +342,8 @@
         <div id="grid-container" class="grid-container"></div>
 
         <div id="hint-box" class="hint-box">
-            <div id="hint-title" class="hint-title">💖 Idol Coach Advice:</div>
-            <div id="hint-text">Keep practicing! Convert percentages to fractions by placing them over 100.</div>
+            <div id="hint-title" class="hint-title">💖 Idol Coach Method Strategy:</div>
+            <div id="hint-text">Remember your strategies to solve conversions!</div>
         </div>
     </div>
 
@@ -324,6 +352,10 @@
         <h1>Debut Confirmed! ✨</h1>
         
         <div class="results-box">
+            <div class="stat-line">
+                <span>Mode Cleared:</span>
+                <strong id="final-mode" style="color: #ff69b4; text-transform: capitalize;">Beginner</strong>
+            </div>
             <div class="stat-line">
                 <span>Total Time Taken:</span>
                 <strong id="final-time" style="color: #ffb6c1;">0.0s</strong>
@@ -346,7 +378,7 @@
 </div>
 
 <script>
-    // Audio Synthesizer for K-Pop SFX
+    // Audio Synthesizer
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
 
@@ -359,7 +391,6 @@
         const now = audioCtx.currentTime;
 
         if (type === 'match') {
-            // Sparkly K-pop chime
             [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, idx) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
@@ -373,7 +404,6 @@
                 osc.stop(now + idx * 0.08 + 0.25);
             });
         } else if (type === 'mismatch') {
-            // Cute sad pop down
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'triangle';
@@ -386,7 +416,6 @@
             osc.start(now);
             osc.stop(now + 0.2);
         } else if (type === 'flip') {
-            // Soft click
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sine';
@@ -398,7 +427,6 @@
             osc.start(now);
             osc.stop(now + 0.05);
         } else if (type === 'victory') {
-            // Upbeat K-Pop Fanfare
             [659.25, 659.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
@@ -414,7 +442,6 @@
         }
     }
 
-    // K-Pop Idol Avatars
     const idols = [
         {
             name: "Mina (Vocal Leader)",
@@ -441,12 +468,29 @@
         }
     ];
 
-    // Helper: Greatest Common Divisor for Simplest Form Fraction
+    // Math Lists setup
+    const beginnerPcts = [1, 2, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100];
+    
+    // Build full set of valid values (multiples of 2% & 5% < 100, plus 1%)
+    const allMultiples = new Set([1]);
+    for (let i = 2; i <= 100; i += 2) allMultiples.add(i);
+    for (let i = 5; i <= 100; i += 5) allMultiples.add(i);
+
+    // Advanced pool: Anything in allMultiples that is NOT in beginnerPcts
+    const advancedPcts = Array.from(allMultiples).filter(x => !beginnerPcts.includes(x));
+
+    let selectedDifficulty = 'beginner';
+
+    function selectDifficulty(mode, element) {
+        selectedDifficulty = mode;
+        document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.remove('selected'));
+        element.classList.add('selected');
+    }
+
     function gcd(a, b) {
         return b === 0 ? a : gcd(b, a % b);
     }
 
-    // Helper: Convert Percentage to Simplest Fraction String
     function getSimplestFraction(pct) {
         if (pct === 100) return "1";
         const common = gcd(pct, 100);
@@ -455,39 +499,43 @@
         return `${num}/${den}`;
     }
 
-    // Generate Question Pool based on Singapore Math P6 Foundation constraints
+    function getRandomUniqueItems(arr, count) {
+        const copy = [...arr];
+        const result = [];
+        for (let i = 0; i < count; i++) {
+            if (copy.length === 0) break;
+            const idx = Math.floor(Math.random() * copy.length);
+            result.push(copy.splice(idx, 1)[0]);
+        }
+        return result;
+    }
+
     function generateConversionPool() {
-        // Base percentages: 1%, 2%, 4%, 5%, 8%, 10%, 20%, 25%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100%
-        // Plus any multiples of 2% and 5% < 100
-        const allowedPctSet = new Set([1, 2, 4, 5, 8, 10, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]);
-        for (let i = 2; i < 100; i += 2) allowedPctSet.add(i);
-        for (let i = 5; i < 100; i += 5) allowedPctSet.add(i);
+        let selectedPcts = [];
 
-        const allowedPctList = Array.from(allowedPctSet);
-
-        // Pick 6 random unique percentage values for a 12-card board (6 pairs)
-        const selected = [];
-        const copyList = [...allowedPctList];
-        for (let i = 0; i < 6; i++) {
-            const randomIndex = Math.floor(Math.random() * copyList.length);
-            selected.push(copyList.splice(randomIndex, 1)[0]);
+        if (selectedDifficulty === 'beginner') {
+            selectedPcts = getRandomUniqueItems(beginnerPcts, 6);
+        } else if (selectedDifficulty === 'intermediate') {
+            // Half Beginner (3), Half Advanced (3)
+            const bPicks = getRandomUniqueItems(beginnerPcts, 3);
+            const aPicks = getRandomUniqueItems(advancedPcts, 3);
+            selectedPcts = [...bPicks, ...aPicks];
+        } else if (selectedDifficulty === 'advanced') {
+            selectedPcts = getRandomUniqueItems(advancedPcts, 6);
         }
 
-        // Build pairs using mixed representations (Percentage, Decimal, Fraction)
         const cards = [];
-        selected.forEach((pct, pairId) => {
+        selectedPcts.forEach((pct, pairId) => {
             const decVal = (pct / 100).toString();
             const fracVal = getSimplestFraction(pct);
             const pctVal = `${pct}%`;
 
-            // Randomly select 2 different formats for this matching pair
             const representations = [
                 { display: pctVal, type: 'Percentage', rawPct: pct },
                 { display: decVal, type: 'Decimal', rawPct: pct },
                 { display: fracVal, type: 'Fraction', rawPct: pct }
             ];
 
-            // Shuffle representations and take 2
             representations.sort(() => Math.random() - 0.5);
             const rep1 = representations[0];
             const rep2 = representations[1];
@@ -496,11 +544,10 @@
             cards.push({ id: `p${pairId}-2`, pairId: pairId, display: rep2.display, type: rep2.type, rawPct: pct });
         });
 
-        // Shuffle cards for grid
         return cards.sort(() => Math.random() - 0.5);
     }
 
-    // Game state
+    // State Variables
     let cards = [];
     let firstCard = null;
     let secondCard = null;
@@ -525,16 +572,13 @@
         document.getElementById('pairs-tracker').innerText = "6/6";
         document.getElementById('hint-box').classList.remove('active');
 
-        // Set Avatar
         const idol = idols[Math.floor(Math.random() * idols.length)];
         document.getElementById('idol-svg-container').innerHTML = idol.svg;
         document.getElementById('idol-name').innerText = idol.name;
 
-        // Generate Board
         cards = generateConversionPool();
         renderBoard();
 
-        // Start Timer
         startTime = Date.now();
         timerInterval = setInterval(updateTimer, 100);
     }
@@ -611,28 +655,35 @@
         lockBoard = true;
         playSFX('mismatch');
 
-        // Show tactical hint based on the pair attempted
-        showHint(firstCard.data, secondCard.data);
+        // Trigger conceptual process hint
+        showConceptualHint(firstCard.data, secondCard.data);
 
         setTimeout(() => {
             firstCard.element.classList.remove('flipped');
             secondCard.element.classList.remove('flipped');
             resetBoard();
-        }, 1400);
+        }, 1600);
     }
 
-    function showHint(card1, card2) {
+    // Method-based hint reminding HOW to convert rather than providing direct answers
+    function showConceptualHint(card1, card2) {
         const hintBox = document.getElementById('hint-box');
         const hintText = document.getElementById('hint-text');
 
-        // Formulate tailored hint
-        let tip = "";
-        const fracStr = getSimplestFraction(card1.rawPct);
-        const decStr = (card1.rawPct / 100).toString();
+        const types = [card1.type, card2.type];
+        let strategyMessage = "";
 
-        tip = `💡 <strong>Coach Tip:</strong> ${card1.rawPct}% is equal to Decimal <strong>${decStr}</strong> and Fraction <strong>${fracStr}</strong> in its simplest form.`;
+        if (types.includes('Percentage') && types.includes('Fraction')) {
+            strategyMessage = "💡 <strong>Percentage ↔ Fraction Method:</strong> Put the percentage number over 100 (e.g. 24% = <sup>24</sup>/<sub>100</sub>). Then divide the top and bottom by their common factor to simplify to lowest terms!";
+        } else if (types.includes('Percentage') && types.includes('Decimal')) {
+            strategyMessage = "💡 <strong>Percentage ↔ Decimal Method:</strong> To convert a percentage to a decimal, divide by 100 by shifting the decimal point 2 places to the left!";
+        } else if (types.includes('Fraction') && types.includes('Decimal')) {
+            strategyMessage = "💡 <strong>Fraction ↔ Decimal Method:</strong> Convert the fraction denominator to 100 by multiplying top and bottom, then write it as a decimal!";
+        } else {
+            strategyMessage = "💡 <strong>Conversion Strategy:</strong> Change both values into Percentages (out of 100) first to easily check if they are equal!";
+        }
 
-        hintText.innerHTML = tip;
+        hintText.innerHTML = strategyMessage;
         hintBox.classList.add('active');
     }
 
@@ -651,6 +702,7 @@
         const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
         const accuracy = Math.round((6 / attempts) * 100);
 
+        document.getElementById('final-mode').innerText = selectedDifficulty;
         document.getElementById('final-time').innerText = `${totalTime}s`;
         document.getElementById('final-attempts').innerText = `${attempts} attempts`;
         document.getElementById('final-accuracy').innerText = `${accuracy}%`;
@@ -660,13 +712,13 @@
 
         if (attempts === 6) {
             rankTitle.innerText = "Debut Rank: Center Visual Idol 👑";
-            completionMsg.innerText = "Flawless score! Perfect conversions with zero errors!";
+            completionMsg.innerText = "Flawless execution! Perfect conversions with zero errors!";
         } else if (attempts <= 10) {
             rankTitle.innerText = "Debut Rank: Lead Performer 🌟";
             completionMsg.innerText = "Great job! Strong math speed and solid accuracy.";
         } else {
             rankTitle.innerText = "Debut Rank: Rising Idol Trainee 💖";
-            completionMsg.innerText = "Good effort! Practice converting fractions to decimals over 100 to level up!";
+            completionMsg.innerText = "Good effort! Practice your conversion steps to level up!";
         }
     }
 
