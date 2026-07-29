@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Plumber: Fraction Adventure (P6 Foundation)</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Courier New', Courier, monospace; }
+        body { margin: 0; padding: 0; background-color: #222; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: white; }
+        
+        #game-container {
+            width: 800px;
+            height: 480px;
+            position: relative;
+            background-color: #5c94fc;
+            border: 4px solid #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        /* Canvas */
+        canvas { width: 100%; height: 100%; display: block; }
+
+        /* UI Screens */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 { color: #ffcc00; font-size: 32px; text-shadow: 3px 3px #ff0000; margin-bottom: 10px; }
+        p { margin-bottom: 20px; font-size: 16px; line-height: 1.4; max-width: 600px; }
+
+        .btn {
+            background-color: #e52521;
+            color: white;
+            border: 3px solid #fff;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 8px;
+            transition: transform 0.1s;
+        }
+        .btn:hover { transform: scale(1.05); background-color: #f0403c; }
+
+        .concept-btn-group { display: flex; flex-direction: column; width: 80%; max-width: 450px; }
+        
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 10px; left: 10px; right: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px #000;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* Modal Overlay for Math Questions */
+        #math-modal {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.88);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            padding: 20px;
+        }
+
+        .question-box {
+            background: #f8d878;
+            border: 4px solid #a81000;
+            color: #000;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            width: 85%;
+            max-width: 550px;
+            box-shadow: 0 8px 0 #600000;
+        }
+
+        .fraction {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        .fraction span.num { display: block; border-bottom: 2px solid #000; padding: 0 4px; }
+        .fraction span.den { display: block; padding: 0 4px; }
+        .math-expr { font-size: 28px; display: flex; align-items: center; justify-content: center; margin: 15px 0; }
+
+        .answer-inputs { display: flex; align-items: center; justify-content: center; margin-top: 15px; font-size: 24px; }
+        .answer-inputs input {
+            width: 60px; height: 40px; font-size: 20px; text-align: center;
+            border: 2px solid #000; border-radius: 4px; margin: 2px;
+        }
+
+        #hint-box {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 2px dashed #ffebaa;
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="480"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div>CONCEPT: <span id="hud-concept">ALL</span></div>
+        <div>TIME: <span id="hud-timer">0.0</span>s</div>
+        <div>SCORE: <span id="hud-score">0</span></div>
+    </div>
+
+    <!-- Start Menu Screen -->
+    <div id="menu-screen" class="screen">
+        <h1>MATH PLUMBER</h1>
+        <p>P6 Foundation Maths: Fractions Revision</p>
+        <p>Choose a concept to practice:</p>
+        <div class="concept-btn-group">
+            <button class="btn" onclick="startGame('frac_whole')">1. Fraction × Whole Number</button>
+            <button class="btn" onclick="startGame('frac_frac')">2. Fraction × Fraction</button>
+            <button class="btn" onclick="startGame('div_whole_frac')">3. Whole ÷ Fraction & Vice Versa</button>
+            <button class="btn" onclick="startGame('div_frac_frac')">4. Fraction ÷ Fraction</button>
+            <button class="btn" style="background-color: #28a745;" onclick="startGame('mix')">★ MIXED ALL CONCEPTS ★</button>
+        </div>
+    </div>
+
+    <!-- Math Question Modal -->
+    <div id="math-modal">
+        <div class="question-box">
+            <h2 style="margin-top:0;">Hit the Question Block!</h2>
+            <p>Solve the problem to collect the power-up:</p>
+            <div id="math-expression" class="math-expr"></div>
+            
+            <div class="answer-inputs">
+                <span>Answer:&nbsp;</span>
+                <!-- Mixed number or Fraction inputs -->
+                <div id="mixed-input-group" style="display:none; margin-right:5px;">
+                    <input type="number" id="ans-whole" placeholder="W">
+                </div>
+                <div class="fraction">
+                    <span class="num"><input type="number" id="ans-num" placeholder="N"></span>
+                    <span class="den"><input type="number" id="ans-den" placeholder="D"></span>
+                </div>
+            </div>
+
+            <div id="hint-box"></div>
+            <br>
+            <button class="btn" onclick="checkAnswer()">Submit Answer</button>
+        </div>
+    </div>
+
+    <!-- Game Over / Win Screen -->
+    <div id="end-screen" class="screen" style="display: none;">
+        <h1 id="end-title">STAGE CLEAR!</h1>
+        <p id="end-stats">Final Time: 0s | Final Score: 0</p>
+        <button class="btn" onclick="showMenu()">Back to Menu</button>
+    </div>
+</div>
+
+<script>
+// --- GAME STATE VARIABLES ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let gameMode = 'mix';
+let gameRunning = false;
+let startTime = 0;
+let elapsedTime = 0;
+let score = 0;
+let currentQuestion = null;
+let currentBlock = null;
+let attempts = 0;
+
+// World & Physics Setup
+const gravity = 0.5;
+let cameraX = 0;
+
+// Player Setup
+const player = {
+    x: 50, y: 300, width: 32, height: 48,
+    vx: 0, vy: 0, speed: 4, jumpPower: -11,
+    grounded: false
+};
+
+// Level Map Structures
+let platforms = [];
+let questionBlocks = [];
+let finishPipe = { x: 2200, y: 336, width: 64, height: 96 };
+
+const keys = {};
+
+// Helper Functions
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+// --- GENERATE QUESTION & SCAFFOLDED HINTS ---
+function generateQuestion(category) {
+    let type = category;
+    if (category === 'mix') {
+        const types = ['frac_whole', 'frac_frac', 'div_whole_frac', 'div_frac_frac'];
+        type = types[Math.floor(Math.random() * types.length)];
+    }
+
+    let q = { type: type, promptHTML: '', correct: {}, hint1: '', hint2: '' };
+
+    function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+    if (type === 'frac_whole') {
+        // e.g., 2/3 * 6 or 6 * 2/3
+        let den = rand(2, 6);
+        let num = rand(1, den - 1);
+        let mult = rand(2, 5);
+        let whole = den * mult; // clean integer or simple fraction
+        let isReversed = Math.random() > 0.5;
+
+        let resNum = num * whole;
+        let resDen = den;
+        let g = gcd(resNum, resDen);
+        resNum /= g; resDen /= g;
+
+        q.correct = { num: resNum % resDen, den: resDen === 1 ? 1 : resDen, whole: Math.floor(resNum / resDen) };
+        
+        let fracHTML = `<div class="fraction"><span class="num">${num}</span><span class="den">${den}</span></div>`;
+        q.promptHTML = isReversed ? `${whole} × ${fracHTML}` : `${fracHTML} × ${whole}`;
+        
+        q.hint1 = `<strong>Hint 1:</strong> Multiply the whole number by the top number (numerator). Keep the bottom number (denominator) the same.`;
+        q.hint2 = `<strong>Hint 2:</strong> (${whole} × ${num}) / ${den} = ${whole * num}/${den}. Don't forget to simplify or express as a mixed/whole number!`;
+
+    } else if (type === 'frac_frac') {
+        // e.g., 1/2 * 2/3
+        let d1 = rand(2, 5), n1 = rand(1, d1 - 1);
+        let d2 = rand(2, 5), n2 = rand(1, d2 - 1);
+
+        let resNum = n1 * n2;
+        let resDen = d1 * d2;
+        let g = gcd(resNum, resDen);
+        resNum /= g; resDen /= g;
+
+        q.correct = { num: resNum % resDen, den: resDen === 1 ? 1 : resDen, whole: Math.floor(resNum / resDen) };
+
+        q.promptHTML = `<div class="fraction"><span class="num">${n1}</span><span class="den">${d1}</span></div> × 
+                        <div class="fraction"><span class="num">${n2}</span><span class="den">${d2}</span></div>`;
+
+        q.hint1 = `<strong>Hint 1:</strong> Multiply Numerator × Numerator, and Denominator × Denominator directly.`;
+        q.hint2 = `<strong>Hint 2:</strong> Top = ${n1} × ${n2} = ${n1*n2}. Bottom = ${d1} × ${d2} = ${d1*d2}. Reduce to simplest form.`;
+
+    } else if (type === 'div_whole_frac') {
+        // e.g., 3 ÷ 1/2  OR 1/2 ÷ 3
+        let mode = Math.random() > 0.5 ? 'W_DIV_F' : 'F_DIV_W';
+        let d = rand(2, 5), n = rand(1, d - 1);
+        let w = rand(2, 4);
+
+        if (mode === 'W_DIV_F') {
+            // Whole ÷ Fraction -> Whole * (1/Fraction)
+            let resNum = w * d;
+            let resDen = n;
+            let g = gcd(resNum, resDen);
+            resNum /= g; resDen /= g;
+
+            q.correct = { num: resNum % resDen, den: resDen === 1 ? 1 : resDen, whole: Math.floor(resNum / resDen) };
+            q.promptHTML = `${w} ÷ <div class="fraction"><span class="num">${n}</span><span class="den">${d}</span></div>`;
+            q.hint1 = `<strong>Hint 1 (Keep-Change-Flip):</strong> Keep ${w}, Change ÷ to ×, Flip the fraction to <div class="fraction" style="font-size:14px;"><span class="num">${d}</span><span class="den">${n}</span></div>.`;
+            q.hint2 = `<strong>Hint 2:</strong> Calculate ${w} × ${d}/${n} = ${w*d}/${n}. Simplify if possible!`;
+        } else {
+            // Fraction ÷ Whole -> Fraction * 1/Whole
+            let resNum = n;
+            let resDen = d * w;
+            let g = gcd(resNum, resDen);
+            resNum /= g; resDen /= g;
+
+            q.correct = { num: resNum, den: resDen, whole: 0 };
+            q.promptHTML = `<div class="fraction"><span class="num">${n}</span><span class="den">${d}</span></div> ÷ ${w}`;
+            q.hint1 = `<strong>Hint 1 (Keep-Change-Flip):</strong> Keep the first fraction, Change ÷ to ×, Flip ${w} into <div class="fraction" style="font-size:14px;"><span class="num">1</span><span class="den">${w}</span></div>.`;
+            q.hint2 = `<strong>Hint 2:</strong> Calculate <div class="fraction" style="font-size:14px;"><span class="num">${n}</span><span class="den">${d}</span></div> × <div class="fraction" style="font-size:14px;"><span class="num">1</span><span class="den">${w}</span></div> = ${n}/${d*w}.`;
+        }
+
+    } else if (type === 'div_frac_frac') {
+        // e.g., 1/2 ÷ 3/4
+        let d1 = rand(2, 5), n1 = rand(1, d1 - 1);
+        let d2 = rand(2, 5), n2 = rand(1, d2 - 1);
+
+        let resNum = n1 * d2;
+        let resDen = d1 * n2;
+        let g = gcd(resNum, resDen);
+        resNum /= g; resDen /= g;
+
+        q.correct = { num: resNum % resDen, den: resDen === 1 ? 1 : resDen, whole: Math.floor(resNum / resDen) };
+
+        q.promptHTML = `<div class="fraction"><span class="num">${n1}</span><span class="den">${d1}</span></div> ÷ 
+                        <div class="fraction"><span class="num">${n2}</span><span class="den">${d2}</span></div>`;
+
+        q.hint1 = `<strong>Hint 1 (Keep-Change-Flip):</strong> Keep 1st fraction, Change ÷ to ×, Flip 2nd fraction to <div class="fraction" style="font-size:14px;"><span class="num">${d2}</span><span class="den">${n2}</span></div>.`;
+        q.hint2 = `<strong>Hint 2:</strong> Multiply <div class="fraction" style="font-size:14px;"><span class="num">${n1}</span><span class="den">${d1}</span></div> × <div class="fraction" style="font-size:14px;"><span class="num">${d2}</span><span class="den">${n2}</span></div> = ${n1*d2}/${d1*n2}. Express in simplest form!`;
+    }
+
+    return q;
+}
+
+// --- LEVEL DESIGN GENERATOR ---
+function buildLevel() {
+    platforms = [
+        // Ground tiles
+        { x: 0, y: 432, width: 800, height: 48 },
+        { x: 900, y: 432, width: 700, height: 48 },
+        { x: 1700, y: 432, width: 800, height: 48 },
+        
+        // Raised platforms
+        { x: 300, y: 300, width: 120, height: 24 },
+        { x: 600, y: 240, width: 160, height: 24 },
+        { x: 1100, y: 320, width: 120, height: 24 },
+        { x: 1350, y: 220, width: 140, height: 24 }
+    ];
+
+    questionBlocks = [
+        { x: 340, y: 180, width: 32, height: 32, active: true },
+        { x: 660, y: 120, width: 32, height: 32, active: true },
+        { x: 1140, y: 200, width: 32, height: 32, active: true },
+        { x: 1400, y: 100, width: 32, height: 32, active: true }
+    ];
+}
+
+// --- INPUT LISTENERS ---
+window.addEventListener('keydown', e => { keys[e.code] = true; });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// --- MENU FUNCTIONS ---
+function startGame(mode) {
+    gameMode = mode;
+    document.getElementById('hud-concept').innerText = mode.toUpperCase();
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('end-screen').style.display = 'none';
+    
+    // Reset player & state
+    player.x = 50; player.y = 300; player.vx = 0; player.vy = 0;
+    cameraX = 0;
+    score = 0;
+    startTime = Date.now();
+    
+    buildLevel();
+    gameRunning = true;
+    requestAnimationFrame(gameLoop);
+}
+
+function showMenu() {
+    document.getElementById('end-screen').style.display = 'none';
+    document.getElementById('menu-screen').style.display = 'flex';
+}
+
+// --- GAME LOOP ---
+function gameLoop() {
+    if (!gameRunning) return;
+
+    update();
+    render();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function update() {
+    // Timer
+    elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    document.getElementById('hud-timer').innerText = elapsedTime;
+    document.getElementById('hud-score').innerText = score;
+
+    // Movement Logic
+    if (keys['ArrowRight'] || keys['KeyD']) player.vx = player.speed;
+    else if (keys['ArrowLeft'] || keys['KeyA']) player.vx = -player.speed;
+    else player.vx = 0;
+
+    if ((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
+    }
+
+    // Apply Gravity
+    player.vy += gravity;
+
+    // Move Player X
+    player.x += player.vx;
+    
+    // Bounds X
+    if (player.x < 0) player.x = 0;
+
+    // Move Player Y
+    player.y += player.vy;
+    player.grounded = false;
+
+    // Platform Collisions
+    platforms.forEach(p => {
+        if (player.x < p.x + p.width && player.x + player.width > p.x &&
+            player.y < p.y + p.height && player.y + player.height > p.y) {
+            
+            // Landing on top
+            if (player.vy > 0 && player.y + player.height - player.vy <= p.y) {
+                player.y = p.y - player.height;
+                player.vy = 0;
+                player.grounded = true;
+            }
+        }
+    });
+
+    // Question Block Collision (Hitting from below)
+    questionBlocks.forEach(b => {
+        if (b.active && player.x < b.x + b.width && player.x + player.width > b.x &&
+            player.y < b.y + b.height && player.y + player.height > b.y) {
+            
+            if (player.vy < 0 && player.y - player.vy >= b.y + b.height - 10) {
+                player.vy = 2; // Bounce back down
+                triggerMathQuestion(b);
+            }
+        }
+    });
+
+    // Pitfall check
+    if (player.y > 500) {
+        // Reset player position on fall
+        player.x = Math.max(50, cameraX + 50);
+        player.y = 200;
+        player.vy = 0;
+    }
+
+    // Camera follow player
+    cameraX = player.x - 200;
+    if (cameraX < 0) cameraX = 0;
+
+    // Check Win Condition (Finish Pipe)
+    if (player.x < finishPipe.x + finishPipe.width && player.x + player.width > finishPipe.x &&
+        player.y < finishPipe.y + finishPipe.height && player.y + player.height > finishPipe.y) {
+        winGame();
+    }
+}
+
+// --- RENDER GAME ---
+function render() {
+    // Sky
+    ctx.fillStyle = '#5c94fc';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(-cameraX, 0);
+
+    // Draw Platforms
+    platforms.forEach(p => {
+        ctx.fillStyle = '#c84c0c'; // Brick Brown
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+        ctx.strokeStyle = '#000';
+        ctx.strokeRect(p.x, p.y, p.width, p.height);
+    });
+
+    // Draw Question Blocks
+    questionBlocks.forEach(b => {
+        ctx.fillStyle = b.active ? '#fcb42c' : '#888';
+        ctx.fillRect(b.x, b.y, b.width, b.height);
+        ctx.strokeStyle = '#000';
+        ctx.strokeRect(b.x, b.y, b.width, b.height);
+        
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 20px Courier';
+        ctx.fillText(b.active ? '?' : '✓', b.x + 10, b.y + 24);
+    });
+
+    // Draw Finish Pipe
+    ctx.fillStyle = '#00a800';
+    ctx.fillRect(finishPipe.x, finishPipe.y, finishPipe.width, finishPipe.height);
+    ctx.strokeStyle = '#000';
+    ctx.strokeRect(finishPipe.x, finishPipe.y, finishPipe.width, finishPipe.height);
+
+    // Draw Player
+    ctx.fillStyle = '#e52521'; // Red Mario-like Plumber
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    ctx.restore();
+}
+
+// --- MATH MODAL INTERACTION ---
+function triggerMathQuestion(block) {
+    gameRunning = false;
+    currentBlock = block;
+    attempts = 0;
+    currentQuestion = generateQuestion(gameMode);
+
+    document.getElementById('math-expression').innerHTML = currentQuestion.promptHTML;
+    document.getElementById('hint-box').style.display = 'none';
+    document.getElementById('hint-box').innerHTML = '';
+    
+    // Clear inputs
+    document.getElementById('ans-whole').value = '';
+    document.getElementById('ans-num').value = '';
+    document.getElementById('ans-den').value = '';
+
+    // Show whole number input option
+    document.getElementById('mixed-input-group').style.display = 'inline-block';
+
+    document.getElementById('math-modal').style.display = 'flex';
+}
+
+function checkAnswer() {
+    let uWhole = parseInt(document.getElementById('ans-whole').value) || 0;
+    let uNum = parseInt(document.getElementById('ans-num').value) || 0;
+    let uDen = parseInt(document.getElementById('ans-den').value) || 1;
+
+    let target = currentQuestion.correct;
+
+    // Convert everything to improper fraction for comparison
+    let targetTotalNum = (target.whole * target.den) + target.num;
+    let targetDen = target.den;
+
+    let userTotalNum = (uWhole * uDen) + uNum;
+    let userDen = uDen;
+
+    // Check equivalence
+    if (userTotalNum * targetDen === targetTotalNum * userDen && userTotalNum !== 0) {
+        // Correct Answer
+        currentBlock.active = false;
+        score += Math.max(100 - (attempts * 30), 40);
+        document.getElementById('math-modal').style.display = 'none';
+        gameRunning = true;
+        requestAnimationFrame(gameLoop);
+    } else {
+        // Incorrect - Provide Scaffolded Hints
+        attempts++;
+        const hintBox = document.getElementById('hint-box');
+        hintBox.style.display = 'block';
+
+        if (attempts === 1) {
+            hintBox.innerHTML = currentQuestion.hint1;
+        } else {
+            hintBox.innerHTML = currentQuestion.hint2;
+        }
+    }
+}
+
+function winGame() {
+    gameRunning = false;
+    document.getElementById('math-modal').style.display = 'none';
+    document.getElementById('end-screen').style.display = 'flex';
+    document.getElementById('end-title').innerText = "COURSE CLEAR!";
+    document.getElementById('end-stats').innerText = `Final Time: ${elapsedTime}s | Final Score: ${score}`;
+}
+</script>
+</body>
+</html>
