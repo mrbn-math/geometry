@@ -450,7 +450,6 @@
         const now = audioCtx.currentTime;
 
         if (type === 'correct') {
-            // Futuristic double beep
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sine';
@@ -463,7 +462,6 @@
             osc.start(now);
             osc.stop(now + 0.3);
         } else if (type === 'wrong') {
-            // Low error buzz
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sawtooth';
@@ -476,7 +474,6 @@
             osc.start(now);
             osc.stop(now + 0.25);
         } else if (type === 'victory') {
-            // Triumph Fanfare
             [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
@@ -538,105 +535,91 @@
     ];
 
     // Dynamic Question Generator for Singapore P6 Foundation Math
-function generateQuestions(count = 8) {
-  const operations = ['mul', 'div'];
-  const factors = [10, 100, 1000];
-  const questions = [];
+    function generateQuestions(count = 8) {
+      const operations = ['mul', 'div'];
+      const factors = [10, 100, 1000];
+      const questionsList = [];
 
-  for (let i = 0; i < count; i++) {
-    const op = operations[Math.floor(Math.random() * operations.length)];
-    const factor = factors[Math.floor(Math.random() * factors.length)];
-    const numZeros = Math.log10(factor);
+      for (let i = 0; i < count; i++) {
+        const op = operations[Math.floor(Math.random() * operations.length)];
+        const factor = factors[Math.floor(Math.random() * factors.length)];
+        const numZeros = Math.log10(factor);
 
-    let num, ansVal, qText, hint;
+        let num, ansVal, qText, hint;
 
-    if (op === 'mul') {
-      // Pick numbers with up to 2 decimal places (or leading zeros like 0.04)
-      const base = (Math.floor(Math.random() * 950) + 1) / 100; // e.g., 0.01 to 9.50
-      num = parseFloat(base.toFixed(2));
-      ansVal = parseFloat((num * factor).toFixed(3));
-      
-      qText = `${num} × ${factor} = ?`;
-      hint = `Multiplying by ${factor} (${numZeros} zero${numZeros > 1 ? 's' : ''}) makes the number BIGGER. Move the decimal point ${numZeros} step${numZeros > 1 ? 's' : ''} to the RIGHT.`;
-      
-      if (num < 1 && factor >= 100 && (num * 10) % 1 !== 0) {
-        hint += ` Fill any empty place value with a zero.`;
+        if (op === 'mul') {
+          const base = (Math.floor(Math.random() * 950) + 1) / 100;
+          num = parseFloat(base.toFixed(2));
+          ansVal = parseFloat((num * factor).toFixed(3));
+          
+          qText = `${num} × ${factor} = ?`;
+          hint = `Multiplying by ${factor} (${numZeros} zero${numZeros > 1 ? 's' : ''}) makes the number BIGGER. Move the decimal point ${numZeros} step${numZeros > 1 ? 's' : ''} to the RIGHT.`;
+          
+          if (num < 1 && factor >= 100 && (num * 10) % 1 !== 0) {
+            hint += ` Fill any empty place value with a zero.`;
+          }
+        } else {
+          if (factor === 10) {
+            num = parseFloat(((Math.floor(Math.random() * 899) + 101) / 10).toFixed(1));
+          } else if (factor === 100) {
+            num = parseFloat(((Math.floor(Math.random() * 8999) + 101) / 10).toFixed(1));
+          } else {
+            num = Math.random() < 0.5 ? Math.floor(Math.random() * 899) + 1 : parseFloat((Math.random() * 20).toFixed(1));
+          }
+
+          ansVal = parseFloat((num / factor).toFixed(4));
+          qText = `${num} ÷ ${factor} = ?`;
+          hint = `Dividing by ${factor} (${numZeros} zero${numZeros > 1 ? 's' : ''}) makes the number SMALLER. Move the decimal point ${numZeros} step${numZeros > 1 ? 's' : ''} to the LEFT.`;
+          
+          if (num < factor) {
+            hint += ` Add leading zeros where necessary.`;
+          }
+        }
+
+        const optionsSet = new Set();
+        const correctStr = String(ansVal);
+        optionsSet.add(correctStr);
+
+        const oppositeDir = op === 'mul' 
+          ? parseFloat((num / factor).toFixed(4)) 
+          : parseFloat((num * factor).toFixed(2));
+        optionsSet.add(String(oppositeDir));
+
+        const offByOne = op === 'mul'
+          ? parseFloat((ansVal / 10).toFixed(4))
+          : parseFloat((ansVal * 10).toFixed(4));
+        if (offByOne !== ansVal) optionsSet.add(String(offByOne));
+
+        const zeroTack = String(num) + "0";
+        optionsSet.add(zeroTack);
+
+        let fallbackOffset = 0.1;
+        while (optionsSet.size < 4) {
+          const dummy = parseFloat((ansVal + fallbackOffset).toFixed(3));
+          if (dummy > 0) optionsSet.add(String(dummy));
+          fallbackOffset += 0.5;
+        }
+
+        const options = Array.from(optionsSet).slice(0, 4);
+        for (let j = options.length - 1; j > 0; j--) {
+          const k = Math.floor(Math.random() * (j + 1));
+          [options[j], options[k]] = [options[k], options[j]];
+        }
+
+        const correctIndex = options.indexOf(correctStr);
+
+        questionsList.push({
+          question: qText,
+          options: options,
+          correct: correctIndex,
+          hint: hint
+        });
       }
-    } else {
-      // For division, create clean decimals or whole numbers
-      if (factor === 10) {
-        num = parseFloat(((Math.floor(Math.random() * 899) + 101) / 10).toFixed(1)); // e.g. 52.8
-      } else if (factor === 100) {
-        num = parseFloat(((Math.floor(Math.random() * 8999) + 101) / 10).toFixed(1)); // e.g. 145.2
-      } else {
-        // Factor 1000: mix of whole numbers and small decimals
-        num = Math.random() < 0.5 ? Math.floor(Math.random() * 899) + 1 : parseFloat((Math.random() * 20).toFixed(1));
-      }
 
-      ansVal = parseFloat((num / factor).toFixed(4));
-      qText = `${num} ÷ ${factor} = ?`;
-      hint = `Dividing by ${factor} (${numZeros} zero${numZeros > 1 ? 's' : ''}) makes the number SMALLER. Move the decimal point ${numZeros} step${numZeros > 1 ? 's' : ''} to the LEFT.`;
-      
-      if (num < factor) {
-        hint += ` Add leading zeros where necessary.`;
-      }
+      return questionsList;
     }
 
-    // Generate smart distractors (common student misconceptions)
-    const optionsSet = new Set();
-    const correctStr = String(ansVal);
-    optionsSet.add(correctStr);
-
-    // Common misconception patterns:
-    // 1. Moving point opposite direction
-    const oppositeDir = op === 'mul' 
-      ? parseFloat((num / factor).toFixed(4)) 
-      : parseFloat((num * factor).toFixed(2));
-    optionsSet.add(String(oppositeDir));
-
-    // 2. Moving point wrong number of steps (off by 1 power of 10)
-    const offByOne = op === 'mul'
-      ? parseFloat((ansVal / 10).toFixed(4))
-      : parseFloat((ansVal * 10).toFixed(4));
-    if (offByOne !== ansVal) optionsSet.add(String(offByOne));
-
-    // 3. Just tacking on / dropping a zero without moving decimal
-    const zeroTack = String(num) + "0";
-    optionsSet.add(zeroTack);
-
-    // Fallback options if Set isn't 4 items yet
-    let fallbackOffset = 0.1;
-    while (optionsSet.size < 4) {
-      const dummy = parseFloat((ansVal + fallbackOffset).toFixed(3));
-      if (dummy > 0) optionsSet.add(String(dummy));
-      fallbackOffset += 0.5;
-    }
-
-    // Convert Set to Array and shuffle options
-    const options = Array.from(optionsSet).slice(0, 4);
-    for (let j = options.length - 1; j > 0; j--) {
-      const k = Math.floor(Math.random() * (j + 1));
-      [options[j], options[k]] = [options[k], options[j]];
-    }
-
-    const correctIndex = options.indexOf(correctStr);
-
-    questions.push({
-      question: qText,
-      options: options,
-      correct: correctIndex,
-      hint: hint
-    });
-  }
-
-  return questions;
-}
-
-// Usage in your code:
-// const questions = generateQuestions(8); // Generates 8 unique questions
-
-    ];
-
+    let questions = [];
     let currentQuestionIndex = 0;
     let score = 0;
     let totalErrors = 0;
@@ -646,7 +629,6 @@ function generateQuestions(count = 8) {
     let elapsedTime = 0;
     let currentAvatar = null;
 
-    // Initialize Random Avatar on start
     function setRandomAvatar() {
         currentAvatar = avatars[Math.floor(Math.random() * avatars.length)];
         const container = document.getElementById('avatar-svg-container');
@@ -658,7 +640,7 @@ function generateQuestions(count = 8) {
         const svg = document.querySelector('.avatar-svg');
         if (!svg) return;
         svg.classList.remove('anim-correct', 'anim-wrong');
-        void svg.offsetWidth; // Trigger reflow
+        void svg.offsetWidth;
         if (type === 'correct') {
             svg.classList.add('anim-correct');
         } else {
@@ -668,6 +650,7 @@ function generateQuestions(count = 8) {
 
     function startQuiz() {
         initAudio();
+        questions = generateQuestions(8); // Dynamically generate new questions
         document.getElementById('start-screen').classList.remove('active');
         document.getElementById('quiz-screen').classList.add('active');
         
@@ -722,7 +705,6 @@ function generateQuestions(count = 8) {
         const q = questions[currentQuestionIndex];
 
         if (selectedIndex === q.correct) {
-            // Correct Answer
             answered = true;
             selectedBtn.classList.add('correct');
             score++;
@@ -734,18 +716,15 @@ function generateQuestions(count = 8) {
 
             document.getElementById('next-btn').style.display = 'block';
         } else {
-            // Incorrect Answer: Apply +5s Penalty
             totalErrors++;
-            elapsedTime += 5; // Penalty addition
+            elapsedTime += 5;
             
             selectedBtn.classList.add('wrong');
             playSFX('wrong');
             animateAvatar('wrong');
 
-            // Visual penalty warning
             showPenaltyPop();
 
-            // Display Tactical Hint
             document.getElementById('hint-title').innerText = `🤖 ${currentAvatar.name} Tactical Hint:`;
             document.getElementById('hint-text').innerText = q.hint;
             document.getElementById('hint-box').classList.add('active');
@@ -772,7 +751,6 @@ function generateQuestions(count = 8) {
     function nextQuestion() {
         currentQuestionIndex++;
         if (currentQuestionIndex < questions.length) {
-            // Switch avatar occasionally for variety
             if (Math.random() > 0.5) setRandomAvatar();
             loadQuestion();
         } else {
@@ -814,7 +792,6 @@ function generateQuestions(count = 8) {
         startQuiz();
     }
 
-    // Set initial avatar on page load
     setRandomAvatar();
 </script>
 
