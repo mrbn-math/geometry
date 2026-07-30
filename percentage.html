@@ -81,6 +81,22 @@
   .hgrid .cell{background:#efe9d8;border:1px solid #d8cfae; border-radius:2px; cursor:pointer; transition:background .12s;}
   .hgrid .cell.on{background:var(--coral);border-color:var(--coral-dark);}
   .hgrid .cell:hover{outline:2px solid var(--gold);}
+  .hgrid .cell.zoom-highlight{
+    border:2px solid var(--gold);
+    box-shadow:0 0 0 0 rgba(232,163,61,0.55);
+    animation:zoomPulse 1.8s ease-out infinite;
+    position:relative; z-index:2;
+  }
+  .hgrid .cell.zoom-highlight.on{ background:var(--coral); border-color:var(--gold); }
+  @keyframes zoomPulse{
+    0%{ box-shadow:0 0 0 0 rgba(232,163,61,0.55); }
+    70%{ box-shadow:0 0 0 9px rgba(232,163,61,0); }
+    100%{ box-shadow:0 0 0 0 rgba(232,163,61,0); }
+  }
+  .zoom-grids-wrap{position:relative;}
+  #zoomConnectorSvg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:1;}
+  .zoom-sub-frame{border:2px dashed var(--gold);border-radius:10px;padding:10px 8px 4px;background:#fffdf6;}
+  .zoom-sub-caption{font-size:.72rem;font-weight:700;color:var(--coral-dark);text-align:center;margin-bottom:6px;letter-spacing:.3px;}
 
   .control-row{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap;}
   input[type=range]{accent-color:var(--coral); flex:1; min-width:120px;}
@@ -238,17 +254,23 @@
 
     <div class="card">
       <h3>Zoom Into 1%</h3>
-      <p class="sub">Some percentages include a part of one whole percent, like 99.5% or 10.25%. Shade the big grid for whole percentages, then use the zoomed-in grid for the extra part.</p>
+      <p class="sub">Some percentages include a part of one whole percent, like 99.5% or 10.25%. Shade the big grid for whole percentages, then use the zoomed-in grid for the extra part. The gold square is the one being zoomed in on the right.</p>
       <div class="context-box" id="zoomTarget">Show 10.25% using the two grids.</div>
-      <div class="grid-2" style="align-items:start;">
-        <div>
-          <div class="hgrid" id="zoomMainGrid" style="max-width:220px;" role="group" aria-label="Whole percent grid"></div>
-          <p class="sub" style="text-align:center;">Whole grid = 100%. Each square = 1%.</p>
+      <div class="zoom-grids-wrap" id="zoomGridsWrap">
+        <div class="grid-2" style="align-items:start;">
+          <div>
+            <div class="hgrid" id="zoomMainGrid" style="max-width:220px;" role="group" aria-label="Whole percent grid"></div>
+            <p class="sub" style="text-align:center;">Whole grid = 100%. Each square = 1%. The gold square is being zoomed in → leave it unshaded and use a different square for your count.</p>
+          </div>
+          <div>
+            <div class="zoom-sub-frame" id="zoomSubFrame">
+              <div class="zoom-sub-caption">🔍 Zoomed-in view of the gold square</div>
+              <div class="hgrid" id="zoomSubGrid" style="max-width:220px;" role="group" aria-label="Zoomed one percent grid"></div>
+            </div>
+            <p class="sub" style="text-align:center;">One zoomed-in square = 1%. Each mini-square = 0.01%.</p>
+          </div>
         </div>
-        <div>
-          <div class="hgrid" id="zoomSubGrid" style="max-width:220px;" role="group" aria-label="Zoomed one percent grid"></div>
-          <p class="sub" style="text-align:center;">One zoomed-in square = 1%. Each mini-square = 0.01%.</p>
-        </div>
+        <svg id="zoomConnectorSvg" aria-hidden="true"></svg>
       </div>
       <div class="control-row">
         <button class="btn" id="zoomCheck">Check</button>
@@ -515,65 +537,86 @@ function generatePercentDistractors(correctPct){
 
 /* =========================================================
    6. QUESTION GENERATORS
+   Difficulty is tied to the resulting fraction's denominator:
+     easy   -> halves/fifths/tenths/twentieths/fiftieths (2,5,10,20,50)
+     medium -> quarters and twenty-fifths (4,25)
+     hard   -> eighths (8) — only reachable via .5% steps like 12.5%, 37.5%, 62.5%, 87.5%
+     expert -> eighths beyond 100%, plus larger unusual denominators
 ========================================================= */
-const LEVELS = {
-  easy:   { pctPool:[10,20,25,50,75,5,15,30,40,60,80,90], types:["mcq_pf","mcq_pd"] },
-  medium: { denPool:[4,5,8,10,20,25], types:["mcq_pf","mcq_pd","fill_blank","true_false","frac_fill"], pctRange:[1,99] },
-  hard:   { denPool:[8,16,20,25,40,50], types:["mcq_pf","frac_fill","fill_blank","number_line_fill","ordering","true_false"], pctRange:[1,149] },
-  expert: { denPool:[8,16,20,25,40,50,80], types:["frac_fill","fill_blank","number_line_fill","ordering","matching","mixed_input"], pctRange:[1,249], allowDecimalPct:true }
+const FRACTION_TIERS = {
+  easy:   { pcts:[50,20,40,60,80,10,30,70,90,5,15,35,45,55,65,85,95,2,6,14,18,22,26,34,38,42,46,54,58,62,66,74,78,82,86,94,98], dens:[2,5,10,20,50] },
+  medium: { pcts:[25,75,4,8,12,16,24,28,32,36,44,48,52,56,64,68,72,76,84,88,92,96], dens:[4,25] },
+  hard:   { pcts:[12.5,37.5,62.5,87.5], dens:[8] },
+  expert: { pcts:[12.5,37.5,62.5,87.5,112.5,137.5,162.5,187.5,212.5,237.5], dens:[8,16,40,50,80] }
 };
 
+const LEVELS = {
+  easy:   { types:["mcq_pf","mcq_pd","true_false"], pctRange:[1,20] },
+  medium: { types:["mcq_pf","mcq_pd","fill_blank","frac_fill","ordering"], pctRange:[1,99] },
+  hard:   { types:["mcq_pf","mcq_pd","frac_fill","fill_blank","number_line_fill","ordering","mixed_input"], pctRange:[1,149] },
+  expert: { types:["frac_fill","mcq_pd","fill_blank","number_line_fill","ordering","matching","mixed_input"], pctRange:[1,249], allowDecimalPct:true }
+};
+
+// general-purpose percentage picker (used by ordering/number-line/decimal tasks,
+// which mix values freely rather than targeting a specific fraction denominator)
 function pickPercentFor(level){
   const L = LEVELS[level];
-  if(L.pctPool) return choice(L.pctPool);
   let pct = randInt(L.pctRange[0], L.pctRange[1]);
   if(L.allowDecimalPct && Math.random()<0.3){ pct = roundClean(pct + choice([0.5,0.25,0.75]),2); }
   return pct;
 }
-// draws a percentage whose fraction form is a genuine fraction (denominator > 1)
-function pickValidFractionPercent(level){
-  let pct, frac, tries=0;
-  do{ pct = pickPercentFor(level); frac = percentToFraction(pct); tries++; }
-  while(frac.den===1 && tries<30);
+
+// picks a percentage guaranteed to simplify to the denominator tier for this level
+function pickFractionTierPercent(level){
+  const tier = FRACTION_TIERS[level] || FRACTION_TIERS.easy;
+  const pct = choice(tier.pcts);
+  const frac = percentToFraction(pct);
   return {pct, frac};
 }
 
+// picks a numerator/denominator pair for a fraction-starting question (mcq_pd),
+// guaranteed to already be in lowest terms for the given denominator
+function pickTierFraction(level){
+  const tier = FRACTION_TIERS[level] || FRACTION_TIERS.easy;
+  const den = choice(tier.dens);
+  let num, tries=0;
+  do{ num = randInt(1, den-1); tries++; } while(gcd(num,den)!==1 && tries<30);
+  return {num, den};
+}
+
 function generatePercentageQuestion(level){
-  const {pct, frac} = pickValidFractionPercent(level);
+  const {pct, frac} = pickFractionTierPercent(level);
   const opts = generateFractionDistractors(frac.num, frac.den, pct);
   return {
     type:"mcq_pf",
     prompt:`Convert ${fmtDecimal(pct)}% to a fraction in its simplest form.`,
     options: opts,
     answer: `${frac.num}/${frac.den}`,
-    explain:`${fmtDecimal(pct)}% = ${fmtDecimal(pct)}/100 = ${frac.num}/${frac.den} (simplified)`
+    explain:`Hint: ${fmtDecimal(pct)}% = ${fmtDecimal(pct)}/100 = ${frac.num}/${frac.den} (simplified)`
   };
 }
 function generateFractionFillQuestion(level){
-  const {pct, frac} = pickValidFractionPercent(level);
+  const {pct, frac} = pickFractionTierPercent(level);
   return {
     type:"frac_fill",
     prompt:`Convert ${fmtDecimal(pct)}% to a fraction in its simplest form.`,
     answerNum: frac.num, answerDen: frac.den,
-    explain:`${fmtDecimal(pct)}% = ${fmtDecimal(pct)}/100 = ${frac.num}/${frac.den} (simplified)`
+    explain:`Hint: ${fmtDecimal(pct)}% = ${fmtDecimal(pct)}/100 = ${frac.num}/${frac.den} (simplified)`
   };
 }
 function fmtNum(n){ return Math.round(n*100)/100; }
 function generateFractionQuestion(level){
-  const L = LEVELS[level];
-  const den = choice(L.denPool || [4,5,8,10,20,25]);
-  let num = randInt(1, den-1) || 1;
-  const simp = simplifyFraction(num, den);
-  const pct = fractionToPercent(simp.num, simp.den);
-  const dec = fractionToDecimal(simp.num, simp.den);
+  const {num, den} = pickTierFraction(level);
+  const pct = fractionToPercent(num, den);
+  const dec = fractionToDecimal(num, den);
   const opts = generatePercentDistractors(fmtNum(pct));
   return {
     type:"mcq_pd",
-    prompt:`Convert `, // filled below with stacked fraction handled by renderer via fracPrompt
-    fracPrompt:{num:simp.num, den:simp.den, suffix:" to a percentage."},
+    prompt:``,
+    fracPrompt:{num, den, suffix:" to a percentage."},
     options: opts.map(o=>`${fmtDecimal(o)}%`),
     answer: `${fmtDecimal(pct)}%`,
-    explain:`${simp.num}/${simp.den} = ${fmtDecimal(dec)} = ${fmtDecimal(pct)}%`
+    explain:`Hint: ${num}/${den} = ${fmtDecimal(dec)} = ${fmtDecimal(pct)}%`
   };
 }
 function generateDecimalQuestion(level){
@@ -581,14 +624,14 @@ function generateDecimalQuestion(level){
   let dec = roundClean(Math.random()* (level==="expert"?2.5:1.2), places);
   if(dec===0) dec = 0.1;
   const pct = decimalToPercent(dec);
-  return { type:"fill_blank", prompt:`Write ${fmtDecimal(dec)} as a percentage.`, answer:`${fmtDecimal(pct)}%`, explain:`${fmtDecimal(dec)} × 100 = ${fmtDecimal(pct)}%` };
+  return { type:"fill_blank", prompt:`Write ${fmtDecimal(dec)} as a percentage.`, answer:`${fmtDecimal(pct)}%`, explain:`Hint: ${fmtDecimal(dec)} × 100 = ${fmtDecimal(pct)}%` };
 }
 function generateTrueFalse(level){
-  const {pct, frac} = pickValidFractionPercent(level);
+  const {pct, frac} = pickFractionTierPercent('easy');
   const showCorrect = Math.random() < 0.5;
   let shownNum = frac.num, shownDen = frac.den;
   if(!showCorrect){ shownDen = frac.den + choice([2,4,-2]); if(shownDen<=0) shownDen = frac.den+2; }
-  return { type:"true_false", pctLabel:pct, shownNum, shownDen, options:["True","False"], answer: showCorrect ? "True":"False", explain:`${fmtDecimal(pct)}% simplifies to ${frac.num}/${frac.den}.` };
+  return { type:"true_false", pctLabel:pct, shownNum, shownDen, options:["True","False"], answer: showCorrect ? "True":"False", explain:`Hint: ${fmtDecimal(pct)}% simplifies to ${frac.num}/${frac.den}.` };
 }
 function generateNumberLineFillTask(level){
   const repType = choice(['pct','decimal','fraction']);
@@ -610,20 +653,34 @@ function generateNumberLineFillTask(level){
     leftLabel: labelFor(leftPct), rightLabel: labelFor(rightPct),
     segments, targetIndex,
     answer: targetPct,
-    explain:`The line is divided into ${segments} equal parts from ${leftPct}% to ${rightPct}%, so each part is ${fmtDecimal(stepPct)}%. The marked point is ${targetIndex} parts from the left: ${leftPct}% + ${targetIndex} × ${fmtDecimal(stepPct)}% = ${fmtDecimal(targetPct)}%.`
+    explain:`Hint: the line is divided into ${segments} equal parts from ${leftPct}% to ${rightPct}%, so each part is ${fmtDecimal(stepPct)}%. The marked point is ${targetIndex} parts from the left: ${leftPct}% + ${targetIndex} × ${fmtDecimal(stepPct)}% = ${fmtDecimal(targetPct)}%.`
   };
 }
 function generateOrderingTask(level){
-  const set = new Set();
-  while(set.size<4){ set.add(pickPercentFor(level)); }
-  const values = [...set];
-  const items = values.map(p => ({label:`${fmtDecimal(p)}%`, val:p}));
-  return { type:"ordering", prompt:"Drag to arrange these from smallest to largest.", items: shuffle(items), answerOrder: items.slice().sort((a,b)=>a.val-b.val).map(i=>i.label), explain:"Compare the percentage values directly." };
+  const vals = new Set();
+  while(vals.size<4){ vals.add(pickPercentFor(level)); }
+  const pctVals = [...vals];
+  const items = pctVals.map((p,idx)=>{
+    const rep = choice(['pct','decimal','fraction']);
+    let label;
+    if(rep==='pct'){ label = `${fmtDecimal(p)}%`; }
+    else if(rep==='decimal'){ label = fmtDecimal(percentToDecimal(p)); }
+    else { const f = percentToFraction(p); label = stackFracHTML(f.num, f.den); }
+    return {idx, label, val:p, rep};
+  });
+  const answerOrder = items.slice().sort((a,b)=>a.val-b.val).map(i=>i.idx);
+  return {
+    type:"ordering",
+    prompt:"Drag to arrange these from smallest to largest. They're a mix of percentages, decimals, and fractions.",
+    items: shuffle(items),
+    answerOrder,
+    explain:"Hint: convert every value to a decimal (or percentage) first, then compare them side by side."
+  };
 }
 function generateMatchingTask(level){
   const pcts = shuffle([10,20,25,40,50,60,75,80,90,12,15,35]).slice(0,3);
   const pairs = pcts.map(p=>{ const f = percentToFraction(p); return {pct:`${p}%`, frac:`${f.num}/${f.den}`}; });
-  return { type:"matching", prompt:"Match each percentage to its simplified fraction.", left: pairs.map(p=>p.pct), right: shuffle(pairs.map(p=>p.frac)), pairs, explain:"Each percentage divides by 100 then simplifies." };
+  return { type:"matching", prompt:"Match each percentage to its simplified fraction.", left: pairs.map(p=>p.pct), right: shuffle(pairs.map(p=>p.frac)), pairs, explain:"Hint: each percentage divides by 100 then simplifies." };
 }
 function generateMixedInputQuestion(){
   const whole = randInt(1,2);
@@ -635,7 +692,7 @@ function generateMixedInputQuestion(){
     type:"mixed_input",
     prompt:`Convert ${fmtDecimal(pct)}% to a mixed number in its simplest form.`,
     whole, num: simp.num, den: simp.den,
-    explain:`${fmtDecimal(pct)}% = ${whole} whole(s) plus ${fmtDecimal(fractionToPercent(num,den))}% = ${whole} ${simp.num}/${simp.den}`
+    explain:`Hint: ${fmtDecimal(pct)}% = ${whole} whole(s) plus ${fmtDecimal(fractionToPercent(num,den))}% = ${whole} ${simp.num}/${simp.den}`
   };
 }
 function generateChallengeQuestion(level){
@@ -770,6 +827,7 @@ document.querySelectorAll('.station-btn').forEach(btn=>{
     btn.classList.add('active');
     document.querySelectorAll('.zone').forEach(z=>z.classList.remove('active'));
     document.getElementById('zone'+btn.dataset.zone).classList.add('active');
+    if(btn.dataset.zone==="1"){ requestAnimationFrame(()=> requestAnimationFrame(updateZoomConnector)); }
     if(btn.dataset.zone!=="5") { state.zoneStamps[btn.dataset.zone]=true; saveState(); updateDashboard(); }
   });
 });
@@ -839,6 +897,53 @@ refreshContext();
 const zoomMainGrid = buildGrid(document.getElementById('zoomMainGrid'));
 const zoomSubGrid = buildGrid(document.getElementById('zoomSubGrid'));
 let zoomTargetWhole = 0, zoomTargetSub = 0;
+let zoomGoldNudged = false;
+
+// Live nudge: as soon as the reserved gold square gets shaded, tell the student
+// right away instead of waiting for them to click Check.
+document.getElementById('zoomMainGrid').addEventListener('mousedown', ()=> requestAnimationFrame(checkGoldNudge));
+document.getElementById('zoomMainGrid').addEventListener('mouseover', ()=> requestAnimationFrame(checkGoldNudge));
+document.getElementById('zoomMainGrid').addEventListener('keydown', ()=> requestAnimationFrame(checkGoldNudge));
+function checkGoldNudge(){
+  const cell = zoomMainGrid.cells[zoomTargetWhole];
+  if(!cell) return;
+  const shaded = cell.classList.contains('on');
+  if(shaded && !zoomGoldNudged){
+    zoomGoldNudged = true;
+    showToast("That gold square is reserved for the zoom — try a different square.");
+  } else if(!shaded){
+    zoomGoldNudged = false;
+  }
+}
+
+// Draws two dashed connector lines linking the highlighted cell in the whole
+// grid to the zoomed-in frame, so it's visually clear they're the same square.
+function updateZoomConnector(){
+  const wrap = document.getElementById('zoomGridsWrap');
+  const svg = document.getElementById('zoomConnectorSvg');
+  const targetCell = zoomMainGrid.cells[zoomTargetWhole];
+  const subFrame = document.getElementById('zoomSubFrame');
+  if(!wrap || !svg || !targetCell || !subFrame) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  if(wrapRect.width===0 || wrapRect.height===0) return; // zone not visible yet
+  const cellRect = targetCell.getBoundingClientRect();
+  const frameRect = subFrame.getBoundingClientRect();
+  const rel = r => ({ x1:r.left-wrapRect.left, y1:r.top-wrapRect.top, x2:r.right-wrapRect.left, y2:r.bottom-wrapRect.top });
+  const c = rel(cellRect), f = rel(frameRect);
+  svg.setAttribute('viewBox', `0 0 ${wrapRect.width} ${wrapRect.height}`);
+  const stacked = cellRect.bottom <= frameRect.top + 1;
+  let svgLines;
+  if(stacked){
+    svgLines = `<line x1="${c.x1}" y1="${c.y2}" x2="${f.x1}" y2="${f.y1}" />
+                <line x1="${c.x2}" y1="${c.y2}" x2="${f.x2}" y2="${f.y1}" />`;
+  } else {
+    svgLines = `<line x1="${c.x2}" y1="${c.y1}" x2="${f.x1}" y2="${f.y1}" />
+                <line x1="${c.x2}" y1="${c.y2}" x2="${f.x1}" y2="${f.y2}" />`;
+  }
+  svg.innerHTML = svgLines.replace(/<line /g, '<line stroke="#e8a33d" stroke-width="2" stroke-dasharray="5 4" ');
+}
+window.addEventListener('resize', ()=> requestAnimationFrame(updateZoomConnector));
+
 function newZoomValue(){
   zoomTargetWhole = randInt(0,99);
   zoomTargetSub = randInt(1,99);
@@ -846,14 +951,28 @@ function newZoomValue(){
   document.getElementById('zoomTarget').textContent = `Show ${fmtDecimal(targetVal)}% using the two grids.`;
   zoomMainGrid.setCount(0);
   zoomSubGrid.setCount(0);
+  zoomMainGrid.cells.forEach(c=>c.classList.remove('zoom-highlight'));
+  zoomMainGrid.cells[zoomTargetWhole].classList.add('zoom-highlight');
+  zoomGoldNudged = false;
   document.getElementById('zoomFeedback').classList.remove('show');
+  requestAnimationFrame(updateZoomConnector);
 }
 document.getElementById('zoomCheck').addEventListener('click', ()=>{
   const fb = document.getElementById('zoomFeedback');
-  const ok = zoomMainGrid.countOn()===zoomTargetWhole && zoomSubGrid.countOn()===zoomTargetSub;
+  const targetShaded = zoomMainGrid.cells[zoomTargetWhole].classList.contains('on');
+  const mainCountOk = zoomMainGrid.countOn()===zoomTargetWhole;
+  const subCountOk = zoomSubGrid.countOn()===zoomTargetSub;
+  const ok = mainCountOk && subCountOk && !targetShaded;
   fb.classList.remove('good','bad'); fb.classList.add(ok?'good':'bad','show');
-  if(ok){ fb.textContent = pickMessage(GOOD_MESSAGES, goodRef); soundCorrect(); launchConfetti(); }
-  else { fb.textContent = `${pickMessage(BAD_MESSAGES, badRef)} The big grid needs ${zoomTargetWhole} squares, and the zoomed grid needs ${zoomTargetSub} mini-squares.`; soundWrong(); }
+  if(ok){
+    fb.textContent = pickMessage(GOOD_MESSAGES, goodRef); soundCorrect(); launchConfetti();
+  } else if(targetShaded){
+    fb.textContent = `${pickMessage(BAD_MESSAGES, badRef)} Hint: the gold square is the one being zoomed in — it isn't part of the whole percent yet, so leave it unshaded and shade a different square instead.`;
+    soundWrong();
+  } else {
+    fb.textContent = `${pickMessage(BAD_MESSAGES, badRef)} The big grid needs ${zoomTargetWhole} squares (not counting the gold one), and the zoomed grid needs ${zoomTargetSub} mini-squares.`;
+    soundWrong();
+  }
 });
 document.getElementById('zoomNew').addEventListener('click', newZoomValue);
 newZoomValue();
@@ -1280,10 +1399,10 @@ function renderQuestion(){
   }
   else if(currentQuestion.type==="ordering"){
     const ul = document.createElement('ul'); ul.className='order-list';
-    currentQuestion.items.forEach(it=>{ const li=document.createElement('li'); li.textContent=it.label; li.draggable=true; ul.appendChild(li); });
+    currentQuestion.items.forEach(it=>{ const li=document.createElement('li'); li.innerHTML=it.label; li.dataset.idx=it.idx; li.draggable=true; ul.appendChild(li); });
     let dragEl=null;
-    ul.addEventListener('dragstart', e=>{ dragEl=e.target; e.target.classList.add('dragging'); });
-    ul.addEventListener('dragend', e=> e.target.classList.remove('dragging'));
+    ul.addEventListener('dragstart', e=>{ dragEl=e.target.closest('li'); dragEl.classList.add('dragging'); });
+    ul.addEventListener('dragend', e=>{ const li=e.target.closest('li'); if(li) li.classList.remove('dragging'); });
     ul.addEventListener('dragover', e=>{
       e.preventDefault();
       const after = [...ul.querySelectorAll('li:not(.dragging)')].find(li=>{ const box=li.getBoundingClientRect(); return e.clientY < box.top+box.height/2; });
@@ -1292,7 +1411,7 @@ function renderQuestion(){
     stage.appendChild(ul);
     const b = document.createElement('button'); b.className='btn'; b.textContent='Check order'; b.style.marginTop='10px';
     b.addEventListener('click', ()=>{
-      const order = [...ul.querySelectorAll('li')].map(li=>li.textContent);
+      const order = [...ul.querySelectorAll('li')].map(li=>parseInt(li.dataset.idx));
       const ok = JSON.stringify(order)===JSON.stringify(currentQuestion.answerOrder);
       handleAnswer(ok, b, ul, true);
     });
