@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission: Percentage Explorer</title>
+<style>
+  :root{
+    --canopy-900:#0b2e2f;
+    --canopy-800:#0f3d3e;
+    --canopy-700:#154f4f;
+    --paper:#faf6ea;
+    --paper-dim:#f0e9d8;
+    --ink:#1b2b2c;
+    --coral:#ff6b4a;
+    --coral-dark:#e04f30;
+    --gold:#e8a33d;
+    --good:#3f9142;
+    --bad:#d64545;
+    --font-display: Georgia, 'Times New Roman', serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Consolas, 'Courier New', monospace;
+    --radius: 16px;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  html.hc{
+    --canopy-900:#000000; --canopy-800:#000000; --canopy-700:#111111;
+    --paper:#ffffff; --paper-dim:#eeeeee; --ink:#000000;
+    --coral:#ff3300; --gold:#ffaa00; --good:#008800; --bad:#cc0000;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.05), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(255,255,255,0.04), transparent 40%),
+      linear-gradient(160deg, var(--canopy-900), var(--canopy-800) 60%, var(--canopy-700));
+    color:var(--paper); font-family:var(--font-body); font-size: var(--txt-scale, 1); transition:background .4s;
+  }
+  body.big-text{ --txt-scale:1.18; }
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 20px 80px;}
+
+  header.top{position:sticky; top:0; z-index:50; backdrop-filter: blur(10px); background:rgba(11,46,47,0.86); border-bottom:1px solid rgba(255,255,255,0.08);}
+  .top-inner{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);}
+  .brand .stamp{width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold); font-weight:bold; font-size:18px; transform:rotate(-8deg);}
+  .brand h1{font-size:1.15rem;margin:0;letter-spacing:.3px;}
+  .brand small{display:block;font-family:var(--font-body);font-size:.68rem;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;}
+
+  nav.stations{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+  .station-btn{position:relative;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:var(--paper);padding:8px 14px;border-radius:999px;cursor:pointer;font-size:.82rem; font-family:var(--font-body); font-weight:600;display:flex; align-items:center; gap:6px; transition:.2s;}
+  .station-btn .num{width:18px;height:18px;border-radius:50%;background:var(--gold);color:var(--ink);font-size:.68rem;display:flex;align-items:center;justify-content:center;font-weight:800;}
+  .station-btn:hover{background:rgba(255,255,255,0.14);}
+  .station-btn.active{background:var(--coral);border-color:var(--coral);color:#fff;}
+  .station-btn .stamped{position:absolute;top:-6px;right:-6px;font-size:.65rem;background:var(--good);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:#fff;}
+
+  .toolbar-icons{display:flex;gap:6px;}
+  .icon-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:var(--paper);width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;}
+  .icon-btn:hover{background:rgba(255,255,255,0.16);}
+
+  .zone{display:none;animation:fadein .5s ease;}
+  .zone.active{display:block;}
+  @keyframes fadein{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+  .zone-header{margin:28px 0 18px;}
+  .zone-header .eyebrow{font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;}
+  .zone-header h2{font-family:var(--font-display);font-size:2rem;margin:.15rem 0 .3rem;}
+  .zone-header p{color:rgba(250,246,234,0.75);max-width:640px;margin:0;font-size:.95rem;}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;position:relative;border:1px solid rgba(0,0,0,0.06);}
+  .card + .card{margin-top:18px;}
+  .grid-2{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  @media (max-width:820px){ .grid-2, .grid-3{grid-template-columns:1fr;} }
+
+  .card h3{font-family:var(--font-display);margin:0 0 10px;font-size:1.2rem;}
+  .card .sub{font-size:.8rem;color:#5c5c5c;margin-bottom:14px;}
+
+  .hgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:2px; width:100%; max-width:340px; aspect-ratio:1/1; margin:0 auto; user-select:none;}
+  .hgrid .cell{background:#efe9d8;border:1px solid #d8cfae; border-radius:2px; cursor:pointer; transition:background .12s;}
+  .hgrid .cell.on{background:var(--coral);border-color:var(--coral-dark);}
+  .hgrid .cell:hover{outline:2px solid var(--gold);}
+
+  .control-row{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap;}
+  input[type=range]{accent-color:var(--coral); flex:1; min-width:120px;}
+  input[type=number], input[type=text]{font-family:var(--font-mono); padding:6px 10px;border-radius:8px;border:1px solid #ccc;width:80px; font-size:1rem;}
+  button.btn{font-family:var(--font-body); font-weight:700; border:none;border-radius:999px;padding:9px 18px; cursor:pointer; font-size:.85rem; transition:.15s; background:var(--coral); color:#fff;}
+  button.btn:hover{transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,0.2);}
+  button.btn.secondary{background:var(--canopy-700); color:var(--paper);}
+  button.btn.gold{background:var(--gold); color:var(--ink);}
+  button.btn.outline{background:transparent;color:var(--ink);border:1.5px solid var(--ink);}
+  button.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
+  button.btn:focus-visible, .station-btn:focus-visible, .icon-btn:focus-visible, .cell:focus-visible{outline:3px solid var(--gold); outline-offset:2px;}
+
+  .context-box{background:var(--paper-dim); border-left:4px solid var(--coral); border-radius:8px;padding:12px 16px; font-size:.95rem; margin-bottom:14px;}
+  .pill{display:inline-block;background:var(--gold);color:var(--ink);border-radius:999px;padding:2px 10px;font-size:.72rem;font-weight:700;}
+
+  /* Stacked fraction — numerator over denominator, everywhere */
+  .stack-frac{display:inline-flex;flex-direction:column;align-items:center;font-family:var(--font-mono);vertical-align:middle;line-height:1.15;margin:0 2px;}
+  .stack-frac .fr-num,.stack-frac .fr-den{padding:1px 6px;font-size:1em;}
+  .stack-frac .fr-line{width:100%;height:2px;background:currentColor;margin:1px 0;}
+  .stack-frac.editable .fr-line{background:var(--ink);}
+  .stack-frac input{width:52px;text-align:center;border:1px solid #ccc;background:#fff;border-radius:6px;font-family:var(--font-mono);font-size:1em;padding:3px 0;}
+  .mixed-input-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .mixed-input-row .whole-input{width:54px;text-align:center;font-family:var(--font-mono);font-size:1.2rem;padding:7px;border-radius:8px;border:1px solid #ccc;}
+  .chain-item{font-family:var(--font-mono);font-weight:700;}
+  .chain-note{font-size:.75rem;opacity:.7;}
+
+  .pct-inline{display:flex;align-items:center;justify-content:center;gap:4px;}
+  .pct-inline input{width:auto;flex:0 1 100px;}
+  .pct-sign{font-family:var(--font-mono);font-weight:700;font-size:1.2rem;}
+
+  /* Number line */
+  .numline-wrap{padding:40px 10px 10px;}
+  .numline{position:relative;height:6px;background:#ddd;border-radius:3px;margin:60px 20px 30px;}
+  .numline .tick{position:absolute;top:-4px;width:2px;height:14px;background:#999;}
+  .numline .tick-label{position:absolute;top:14px;transform:translateX(-50%);font-size:.7rem;color:#777;font-family:var(--font-mono);white-space:nowrap;}
+  .numline .marker{position:absolute; top:50%; transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:var(--coral); border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3); cursor:grab; touch-action:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem;font-weight:800;}
+  .numline .marker:active{cursor:grabbing;}
+  .numline .marker.hidden-marker{display:none;}
+
+  .explain-steps{margin-top:14px;font-family:var(--font-mono);font-size:.95rem;line-height:2.4;display:flex;align-items:center;flex-wrap:wrap;gap:4px;}
+  .explain-steps .arrow{color:var(--coral);margin:0 6px;}
+
+  .working-box{margin-top:16px;background:var(--paper-dim);border-radius:10px;padding:12px 16px;font-family:var(--font-mono);font-size:.95rem;display:flex;align-items:center;flex-wrap:wrap;gap:4px;}
+
+  .level-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .level-tab{padding:7px 16px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;font-weight:700;font-size:.82rem;}
+  .level-tab.active{background:var(--ink);color:var(--paper);}
+  .q-stage{min-height:220px;}
+  .q-text{font-size:1.15rem;margin-bottom:16px;line-height:1.6;display:flex;align-items:center;flex-wrap:wrap;gap:4px;}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:600px){.choices{grid-template-columns:1fr;}}
+  .choice-btn{background:var(--paper-dim); border:2px solid #ddd; border-radius:10px; padding:12px 16px;font-family:var(--font-mono); font-size:1rem; cursor:pointer; text-align:center; transition:.15s;display:flex;align-items:center;justify-content:center;}
+  .choice-btn:hover{border-color:var(--gold);}
+  .choice-btn.correct{background:#e3f6e3;border-color:var(--good);}
+  .choice-btn.wrong{background:#fbe4e4;border-color:var(--bad);}
+  .choice-btn:disabled{cursor:default;}
+
+  .feedback{margin-top:14px;padding:12px 16px;border-radius:10px;font-weight:600;display:none;}
+  .feedback.show{display:block;animation:pop .3s ease;}
+  .feedback.good{background:#e3f6e3;color:var(--good);}
+  .feedback.bad{background:#fbe4e4;color:var(--bad);}
+  @keyframes pop{from{transform:scale(.9);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+  .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+  .stat-chip{background:var(--canopy-800);color:var(--paper);border-radius:10px;padding:8px 14px;font-size:.82rem;}
+  .stat-chip b{color:var(--gold);font-family:var(--font-mono);}
+
+  .drop-zone{border:2px dashed #bbb; border-radius:10px; min-height:46px; padding:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;background:#fafafa;}
+  .drop-zone.over{border-color:var(--coral);background:#fff4ec;}
+  .drag-chip{background:var(--gold); color:var(--ink); padding:6px 12px; border-radius:8px; font-family:var(--font-mono); font-weight:700; cursor:grab;display:inline-flex;}
+  .order-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;}
+  .order-list li{background:var(--paper-dim);border-radius:8px;padding:10px 14px;font-family:var(--font-mono);cursor:grab;border:1.5px solid transparent;}
+  .order-list li.dragging{opacity:.4;}
+
+  .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  @media(max-width:820px){.dash-grid{grid-template-columns:repeat(2,1fr);}}
+  .dash-tile{background:var(--paper-dim);border-radius:12px;padding:16px;text-align:center;}
+  .dash-tile .big{font-family:var(--font-mono);font-size:1.7rem;font-weight:800;color:var(--coral-dark);}
+  .dash-tile .lab{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:#666;}
+  .badge-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+  .badge{background:linear-gradient(160deg,#fff,var(--paper-dim));border:2px solid var(--gold); border-radius:12px; padding:10px 14px; text-align:center; font-size:.78rem; min-width:90px;}
+  .badge .ic{font-size:1.5rem;display:block;}
+
+  footer.teacher{margin-top:30px;}
+  .teacher-controls{display:flex;flex-wrap:wrap;gap:10px;}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+  #confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:200;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%);background:var(--ink); color:#fff; padding:10px 20px; border-radius:999px; font-size:.85rem; z-index:300;opacity:0; pointer-events:none; transition:.3s;}
+  .toast.show{opacity:1; transform:translate(-50%,-6px);}
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas" aria-hidden="true"></canvas>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <div class="stamp" aria-hidden="true">%</div>
+      <div><h1>Mission: Percentage Explorer</h1><small>Primary 5 &middot; Singapore Maths Expedition</small></div>
+    </div>
+    <nav class="stations" aria-label="Learning zones">
+      <button class="station-btn active" data-zone="1"><span class="num">1</span>Grid Camp<span class="stamped" id="stamp1" hidden>✓</span></button>
+      <button class="station-btn" data-zone="2"><span class="num">2</span>Number Line Trail<span class="stamped" id="stamp2" hidden>✓</span></button>
+      <button class="station-btn" data-zone="3"><span class="num">3</span>Relationship Lab<span class="stamped" id="stamp3" hidden>✓</span></button>
+      <button class="station-btn" data-zone="4"><span class="num">4</span>Challenge Summit<span class="stamped" id="stamp4" hidden>✓</span></button>
+      <button class="station-btn" data-zone="5"><span class="num">★</span>Explorer's Log</button>
+    </nav>
+    <div class="toolbar-icons">
+      <button class="icon-btn" id="btnContrast" title="Toggle high contrast" aria-label="Toggle high contrast">◐</button>
+      <button class="icon-btn" id="btnTextSize" title="Toggle large text" aria-label="Toggle large text">A+</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ================= ZONE 1 ================= -->
+  <section class="zone active" id="zone1" aria-labelledby="z1h">
+    <div class="zone-header">
+      <div class="eyebrow">Station 1</div>
+      <h2 id="z1h">Understanding Percentage</h2>
+      <p>Shade the hundred-grid, match real Singapore stories, and zoom into part of 1%.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Interactive Hundred Grid</h3>
+        <p class="sub">Click, drag, or use the controls below. Every square is 1%.</p>
+        <div class="hgrid" id="hgrid" role="group" aria-label="Hundred grid, click squares to shade"></div>
+        <div class="control-row">
+          <label for="hgridSlider" class="sr-only">Percentage slider</label>
+          <input type="range" id="hgridSlider" min="0" max="100" value="0">
+          <input type="number" id="hgridNumber" min="0" max="100" value="0" aria-label="Percentage value">
+          <span>%</span>
+        </div>
+        <div class="control-row">
+          <button class="btn secondary" id="hgridClear">Erase all</button>
+          <button class="btn gold" id="hgridFill">Fill all</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Show the following in the grid <span class="pill" id="contextPill">Singapore</span></h3>
+        <div class="context-box" id="contextBox">Loading a fresh story…</div>
+        <div class="hgrid" id="storyGrid" style="max-width:230px;" role="group" aria-label="Story hundred grid"></div>
+        <div class="control-row">
+          <button class="btn" id="storyCheck">Check</button>
+          <button class="btn secondary" id="newContextBtn">New story</button>
+        </div>
+        <div class="feedback" id="storyFeedback"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Zoom Into 1%</h3>
+      <p class="sub">Some percentages include a part of one whole percent, like 99.5% or 10.25%. Shade the big grid for whole percentages, then use the zoomed-in grid for the extra part.</p>
+      <div class="context-box" id="zoomTarget">Show 10.25% using the two grids.</div>
+      <div class="grid-2" style="align-items:start;">
+        <div>
+          <div class="hgrid" id="zoomMainGrid" style="max-width:220px;" role="group" aria-label="Whole percent grid"></div>
+          <p class="sub" style="text-align:center;">Whole grid = 100%. Each square = 1%.</p>
+        </div>
+        <div>
+          <div class="hgrid" id="zoomSubGrid" style="max-width:220px;" role="group" aria-label="Zoomed one percent grid"></div>
+          <p class="sub" style="text-align:center;">One zoomed-in square = 1%. Each mini-square = 0.01%.</p>
+        </div>
+      </div>
+      <div class="control-row">
+        <button class="btn" id="zoomCheck">Check</button>
+        <button class="btn secondary" id="zoomNew">New value</button>
+      </div>
+      <div class="feedback" id="zoomFeedback"></div>
+    </div>
+  </section>
+
+  <!-- ================= ZONE 2 ================= -->
+  <section class="zone" id="zone2" aria-labelledby="z2h">
+    <div class="zone-header">
+      <div class="eyebrow">Station 2</div>
+      <h2 id="z2h">Number Line Explorer</h2>
+      <p>Key in a value below in any ONE box, place it on the trail, then work out the other two.</p>
+    </div>
+    <div class="card">
+      <div class="grid-3">
+        <div class="rel-card pct" style="background:#fff4ec;border:2px solid var(--coral);border-radius:14px;padding:16px;text-align:center;">
+          <label style="display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">Percentage</label>
+          <div class="pct-inline"><input type="text" id="nlPctInput" inputmode="decimal" placeholder="e.g. 62"><span class="pct-sign">%</span></div>
+        </div>
+        <div class="rel-card frac" style="background:#fff8e8;border:2px solid var(--gold);border-radius:14px;padding:16px;text-align:center;">
+          <label style="display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">Fraction</label>
+          <div id="nlFracInputHolder" style="display:flex;justify-content:center;"></div>
+        </div>
+        <div class="rel-card dec" style="background:#eef7ee;border:2px solid var(--good);border-radius:14px;padding:16px;text-align:center;">
+          <label for="nlDecInput" style="display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">Decimal</label>
+          <input type="text" id="nlDecInput" inputmode="decimal" placeholder="e.g. 0.62" style="width:100%;text-align:center;font-size:1.2rem;border:none;background:transparent;font-family:var(--font-mono);font-weight:700;">
+        </div>
+      </div>
+      <div class="control-row" style="justify-content:center;">
+        <button class="btn" id="nlPlaceBtn">Place on number line</button>
+        <button class="btn secondary" id="nlCheckBtn" disabled>Check my answers</button>
+        <button class="btn outline" id="nlRefreshBtn">Refresh</button>
+      </div>
+      <div class="control-row" style="justify-content:center;">
+        <span>Zoom range:</span>
+        <input type="number" id="nlRangeMin" value="0.4" step="0.1" style="width:70px;" aria-label="Range start">
+        <span>to</span>
+        <input type="number" id="nlRangeMax" value="0.7" step="0.1" style="width:70px;" aria-label="Range end">
+        <button class="btn outline" id="nlApplyRange">Apply</button>
+      </div>
+      <div class="numline-wrap">
+        <div class="numline" id="numline">
+          <div class="marker hidden-marker" id="marker" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" aria-label="Number line marker"></div>
+        </div>
+      </div>
+      <div class="feedback" id="nlFeedback"></div>
+      <div class="control-row" style="justify-content:center;">
+        <button class="btn gold" id="explainBtn" disabled>Show the steps to convert</button>
+      </div>
+      <div class="explain-steps" id="explainSteps" hidden></div>
+    </div>
+  </section>
+
+  <!-- ================= ZONE 3 ================= -->
+  <section class="zone" id="zone3" aria-labelledby="z3h">
+    <div class="zone-header">
+      <div class="eyebrow">Station 3</div>
+      <h2 id="z3h">Relationship Builder</h2>
+      <p>Work through the steps to convert between percentages, fractions, and decimals — in both directions.</p>
+    </div>
+    <div class="card">
+      <h3>Percentage → Fraction / Decimal</h3>
+      <div class="context-box" id="relATarget">Convert step by step.</div>
+      <div id="relASteps"></div>
+      <div class="control-row">
+        <button class="btn secondary" id="relANewBtn">New question</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Fraction / Decimal → Percentage</h3>
+      <div class="context-box" id="relBTarget">Convert step by step.</div>
+      <div id="relBSteps"></div>
+      <div class="control-row">
+        <button class="btn secondary" id="relBNewBtn">New question</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ZONE 4 ================= -->
+  <section class="zone" id="zone4" aria-labelledby="z4h">
+    <div class="zone-header">
+      <div class="eyebrow">Station 4</div>
+      <h2 id="z4h">Conversion Challenge Summit</h2>
+      <p>Answer to earn stamps. Get several right in a row and the mountain gets steeper.</p>
+    </div>
+    <div class="card">
+      <div class="level-tabs" role="tablist" aria-label="Difficulty level">
+        <button class="level-tab active" data-level="easy">Easy</button>
+        <button class="level-tab" data-level="medium">Medium</button>
+        <button class="level-tab" data-level="hard">Hard</button>
+        <button class="level-tab" data-level="expert">Expert</button>
+      </div>
+      <div class="stat-row">
+        <div class="stat-chip">Streak: <b id="streakVal">0</b></div>
+        <div class="stat-chip">Score: <b id="scoreVal">0</b>/<span id="attemptVal">0</span></div>
+        <div class="stat-chip">Level auto-adapts: <b id="adaptVal">stable</b></div>
+      </div>
+      <div class="q-stage" id="qStage"></div>
+      <div class="feedback" id="qFeedback" role="status" aria-live="polite"></div>
+      <div class="control-row">
+        <button class="btn" id="nextQBtn">Next question →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ZONE 5 : DASHBOARD ================= -->
+  <section class="zone" id="zone5" aria-labelledby="z5h">
+    <div class="zone-header">
+      <div class="eyebrow">Explorer's Log</div>
+      <h2 id="z5h">Teacher Dashboard</h2>
+      <p>Progress is saved on this device between visits.</p>
+    </div>
+    <div class="card">
+      <div class="dash-grid">
+        <div class="dash-tile"><div class="big" id="dAttempted">0</div><div class="lab">Attempted</div></div>
+        <div class="dash-tile"><div class="big" id="dCorrect">0</div><div class="lab">Correct</div></div>
+        <div class="dash-tile"><div class="big" id="dAccuracy">0%</div><div class="lab">Accuracy</div></div>
+        <div class="dash-tile"><div class="big" id="dLongest">0</div><div class="lab">Longest streak</div></div>
+        <div class="dash-tile"><div class="big" id="dAvgTime">0.0s</div><div class="lab">Avg. response time</div></div>
+        <div class="dash-tile"><div class="big" id="dTopic">—</div><div class="lab">Needs improvement</div></div>
+      </div>
+      <div class="badge-row" id="badgeRow"></div>
+    </div>
+    <footer class="teacher">
+      <div class="card">
+        <h3>Teacher Controls</h3>
+        <div class="teacher-controls">
+          <button class="btn" id="genNewSetBtn">Generate new set</button>
+          <button class="btn secondary" id="resetSessionBtn">Reset session</button>
+          <button class="btn secondary" id="resetProgressBtn">Reset all progress</button>
+          <button class="btn gold" id="exportCsvBtn">Export results (CSV)</button>
+          <button class="btn outline" id="guidedModeBtn">Guided mode: ON</button>
+        </div>
+      </div>
+    </footer>
+  </section>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   1. CORE MATH UTILITIES
+========================================================= */
+function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a || 1; }
+function simplifyFraction(num, den){
+  if(den===0) return {num:0, den:1};
+  const sign = (num<0)!==(den<0) ? -1 : 1;
+  num = Math.abs(num); den = Math.abs(den);
+  const g = gcd(num, den);
+  return {num: sign*(num/g), den: den/g};
+}
+function percentToFraction(pct){
+  const decimals = (pct.toString().split('.')[1] || '').length;
+  const scale = Math.pow(10, decimals);
+  const num = Math.round(pct*scale);
+  const den = 100*scale;
+  return simplifyFraction(num, den);
+}
+function percentToDecimal(pct){ return roundClean(pct/100, 5); }
+function decimalToPercent(dec){ return roundClean(dec*100, 5); }
+function decimalToFraction(dec){
+  const s = dec.toString();
+  const decimals = (s.split('.')[1]||'').length;
+  const den = Math.pow(10, decimals);
+  const num = Math.round(dec*den);
+  return simplifyFraction(num, den);
+}
+function fractionToDecimal(num, den){ return roundClean(num/den, 6); }
+function fractionToPercent(num, den){ return roundClean((num/den)*100, 4); }
+function roundClean(n, places){ const f = Math.pow(10, places); return Math.round(n*f)/f; }
+function fmtDecimal(n){ let s=n.toString(); if(s.includes('.')){ s=s.replace(/0+$/,'').replace(/\.$/,''); } return s; }
+function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function choice(arr){ return arr[randInt(0,arr.length-1)]; }
+function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=randInt(0,i); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* =========================================================
+   2. STACKED FRACTION RENDERER (numerator over denominator, everywhere)
+========================================================= */
+let fracIdCounter = 0;
+function stackFracHTML(num, den, opts){
+  opts = opts || {};
+  const id = opts.idPrefix || ('frac'+(fracIdCounter++));
+  const numHTML = opts.editableNum ? `<input type="text" id="${id}-num" class="fr-in" inputmode="numeric" aria-label="numerator">` : `<span class="fr-num">${num}</span>`;
+  const denHTML = opts.editableDen ? `<input type="text" id="${id}-den" class="fr-in" inputmode="numeric" aria-label="denominator">` : `<span class="fr-den">${den}</span>`;
+  const cls = (opts.editableNum||opts.editableDen) ? 'stack-frac editable' : 'stack-frac';
+  return `<span class="${cls}">${numHTML}<span class="fr-line"></span>${denHTML}</span>`;
+}
+function readFracInputs(idPrefix){
+  const n = document.getElementById(idPrefix+'-num');
+  const d = document.getElementById(idPrefix+'-den');
+  return { num: n ? parseInt(n.value) : NaN, den: d ? parseInt(d.value) : NaN };
+}
+
+/* =========================================================
+   3. RANDOM HISTORY (avoid immediate repeats of contexts)
+========================================================= */
+const RecentHistory = { contexts: [] };
+
+/* =========================================================
+   4. SINGAPORE CONTEXT GENERATOR
+========================================================= */
+const CONTEXT_THEMES = [
+  {subject:"students in Primary 5", place:"who chose badminton as their CCA"},
+  {subject:"cups of bubble tea sold", place:"at the school canteen this week"},
+  {subject:"otters", place:"spotted swimming near the Kallang River this month"},
+  {subject:"HDB blocks in the estate", place:"that have completed their repainting"},
+  {subject:"library books", place:"that were returned on time this term"},
+  {subject:"MRT passengers", place:"who travelled before 8am on Monday"},
+  {subject:"trees in the community garden", place:"that are currently flowering"},
+  {subject:"households in the estate", place:"that took part in the recycling drive"},
+  {subject:"stalls at the hawker centre", place:"that sell more than one type of noodle dish"},
+  {subject:"visitors to the playground", place:"who came in the evening"},
+  {subject:"fruit at the stall", place:"that were mangoes"},
+  {subject:"students at Sports Day", place:"who took part in the relay race"},
+  {subject:"seats on the bus", place:"that were occupied during rush hour"},
+  {subject:"shoppers at the mall", place:"who visited the food court"}
+];
+function generateContextScenario(){
+  const pct = choice([10,20,25,30,40,50,60,70,75,80,90,15,35,45,65,85,5,55,95]);
+  let theme, attempts=0;
+  do{ theme = choice(CONTEXT_THEMES); attempts++; } while(RecentHistory.contexts.includes(theme.subject) && attempts<10);
+  RecentHistory.contexts.push(theme.subject);
+  if(RecentHistory.contexts.length>6) RecentHistory.contexts.shift();
+  return { text:`${pct}% of ${theme.subject} ${theme.place}.`, pct };
+}
+
+/* =========================================================
+   5. DISTRACTOR GENERATORS
+========================================================= */
+function generateFractionDistractors(correctNum, correctDen, pct){
+  const set = new Set([`${correctNum}/${correctDen}`]);
+  const candidates = [
+    `${correctDen}/${correctNum}`,
+    `${pct}/100`,
+    `${correctNum}/${Math.max(1,correctDen+2)}`,
+    `${correctNum+1}/${correctDen}`,
+    `${correctNum}/${Math.max(1,correctDen-2)}`
+  ];
+  for(const c of candidates){ if(set.size>=4) break; set.add(c); }
+  let guard=0;
+  while(set.size<4 && guard<30){
+    const n = Math.max(1, correctNum+randInt(-3,3));
+    const d = Math.max(2, correctDen+randInt(-4,4));
+    set.add(`${n}/${d}`);
+    guard++;
+  }
+  return shuffle([...set]).slice(0,4);
+}
+function generatePercentDistractors(correctPct){
+  const set = new Set([correctPct]);
+  set.add(roundClean(correctPct/10,3));
+  set.add(correctPct*10);
+  set.add(roundClean(correctPct+ (Math.random()>0.5?5:-5),2));
+  let guard=0;
+  while(set.size<4 && guard<20){ set.add(roundClean(correctPct+randInt(-8,8),2)); guard++; }
+  return shuffle([...set]).slice(0,4);
+}
+
+/* =========================================================
+   6. QUESTION GENERATORS
+========================================================= */
+const LEVELS = {
+  easy:   { pctPool:[10,20,25,50,75,5,15,30,40,60,80,90], types:["mcq_pf","mcq_pd"] },
+  medium: { denPool:[4,5,8,10,20,25], types:["mcq_pf","mcq_pd","fill_blank","true_false","frac_fill"], pctRange:[1,99] },
+  hard:   { denPool:[8,16,20,25,40,50], types:["mcq_pf","frac_fill","fill_blank","number_line_fill","ordering","true_false"], pctRange:[1,149] },
+  expert: { denPool:[8,16,20,25,40,50,80], types:["frac_fill","fill_blank","number_line_fill","ordering","matching","mixed_input"], pctRange:[1,249], allowDecimalPct:true }
+};
+
+function pickPercentFor(level){
+  const L = LEVELS[level];
+  if(L.pctPool) return choice(L.pctPool);
+  let pct = randInt(L.pctRange[0], L.pctRange[1]);
+  if(L.allowDecimalPct && Math.random()<0.3){ pct = roundClean(pct + choice([0.5,0.25,0.75]),2); }
+  return pct;
+}
+// draws a percentage whose fraction form is a genuine fraction (denominator > 1)
+function pickValidFractionPercent(level){
+  let pct, frac, tries=0;
+  do{ pct = pickPercentFor(level); frac = percentToFraction(pct); tries++; }
+  while(frac.den===1 && tries<30);
+  return {pct, frac};
+}
+
+function generatePercentageQuestion(level){
+  const {pct, frac} = pickValidFractionPercent(level);
+  const opts = generateFractionDistractors(frac.num, frac.den, pct);
+  return {
+    type:"mcq_pf",
+    prompt:`Convert ${fmtDecimal(pct)}% to a fraction in its simplest form.`,
+    options: opts,
+    answer: `${frac.num}/${frac.den}`,
+    explain:`${fmtDecimal(pct)}% = ${fmtDecimal(pct)}/100 = ${frac.num}/${frac.den} (simplified)`
+  };
+}
+function generateFractionFillQuestion(level){
+  const {pct, frac} = pickValidFractionPercent(level);
+  return {
+    type:"frac_fill",
+    prompt:`Convert ${fmtDecimal(pct)}% to a fraction in its simplest form.`,
+    answerNum: frac.num, answerDen: frac.den,
+    explain:`${fmtDecimal(pct)}% = ${fmtDecimal(pct)}/100 = ${frac.num}/${frac.den} (simplified)`
+  };
+}
+function fmtNum(n){ return Math.round(n*100)/100; }
+function generateFractionQuestion(level){
+  const L = LEVELS[level];
+  const den = choice(L.denPool || [4,5,8,10,20,25]);
+  let num = randInt(1, den-1) || 1;
+  const simp = simplifyFraction(num, den);
+  const pct = fractionToPercent(simp.num, simp.den);
+  const dec = fractionToDecimal(simp.num, simp.den);
+  const opts = generatePercentDistractors(fmtNum(pct));
+  return {
+    type:"mcq_pd",
+    prompt:`Convert `, // filled below with stacked fraction handled by renderer via fracPrompt
+    fracPrompt:{num:simp.num, den:simp.den, suffix:" to a percentage."},
+    options: opts.map(o=>`${fmtDecimal(o)}%`),
+    answer: `${fmtDecimal(pct)}%`,
+    explain:`${simp.num}/${simp.den} = ${fmtDecimal(dec)} = ${fmtDecimal(pct)}%`
+  };
+}
+function generateDecimalQuestion(level){
+  const places = level==="expert" ? 3 : 2;
+  let dec = roundClean(Math.random()* (level==="expert"?2.5:1.2), places);
+  if(dec===0) dec = 0.1;
+  const pct = decimalToPercent(dec);
+  return { type:"fill_blank", prompt:`Write ${fmtDecimal(dec)} as a percentage.`, answer:`${fmtDecimal(pct)}%`, explain:`${fmtDecimal(dec)} × 100 = ${fmtDecimal(pct)}%` };
+}
+function generateTrueFalse(level){
+  const {pct, frac} = pickValidFractionPercent(level);
+  const showCorrect = Math.random() < 0.5;
+  let shownNum = frac.num, shownDen = frac.den;
+  if(!showCorrect){ shownDen = frac.den + choice([2,4,-2]); if(shownDen<=0) shownDen = frac.den+2; }
+  return { type:"true_false", pctLabel:pct, shownNum, shownDen, options:["True","False"], answer: showCorrect ? "True":"False", explain:`${fmtDecimal(pct)}% simplifies to ${frac.num}/${frac.den}.` };
+}
+function generateNumberLineFillTask(level){
+  const repType = choice(['pct','decimal','fraction']);
+  const segments = 10;
+  let leftPct = choice([0,10,20]);
+  let span = level==="expert" ? choice([100,150,200]) : choice([50,80,100]);
+  let rightPct = leftPct + span;
+  const stepPct = (rightPct-leftPct)/segments;
+  const targetIndex = randInt(1,segments-1);
+  const targetPct = roundClean(leftPct + stepPct*targetIndex, 2);
+  function labelFor(pct){
+    if(repType==='pct') return `${fmtDecimal(pct)}%`;
+    if(repType==='decimal') return fmtDecimal(percentToDecimal(pct));
+    const f = percentToFraction(pct);
+    return stackFracHTML(f.num, f.den);
+  }
+  return {
+    type:'number_line_fill',
+    leftLabel: labelFor(leftPct), rightLabel: labelFor(rightPct),
+    segments, targetIndex,
+    answer: targetPct,
+    explain:`The line is divided into ${segments} equal parts from ${leftPct}% to ${rightPct}%, so each part is ${fmtDecimal(stepPct)}%. The marked point is ${targetIndex} parts from the left: ${leftPct}% + ${targetIndex} × ${fmtDecimal(stepPct)}% = ${fmtDecimal(targetPct)}%.`
+  };
+}
+function generateOrderingTask(level){
+  const set = new Set();
+  while(set.size<4){ set.add(pickPercentFor(level)); }
+  const values = [...set];
+  const items = values.map(p => ({label:`${fmtDecimal(p)}%`, val:p}));
+  return { type:"ordering", prompt:"Drag to arrange these from smallest to largest.", items: shuffle(items), answerOrder: items.slice().sort((a,b)=>a.val-b.val).map(i=>i.label), explain:"Compare the percentage values directly." };
+}
+function generateMatchingTask(level){
+  const pcts = shuffle([10,20,25,40,50,60,75,80,90,12,15,35]).slice(0,3);
+  const pairs = pcts.map(p=>{ const f = percentToFraction(p); return {pct:`${p}%`, frac:`${f.num}/${f.den}`}; });
+  return { type:"matching", prompt:"Match each percentage to its simplified fraction.", left: pairs.map(p=>p.pct), right: shuffle(pairs.map(p=>p.frac)), pairs, explain:"Each percentage divides by 100 then simplifies." };
+}
+function generateMixedInputQuestion(){
+  const whole = randInt(1,2);
+  const den = choice([4,5,8,10,20]);
+  const num = randInt(1,den-1);
+  const simp = simplifyFraction(num,den);
+  const pct = roundClean(whole*100 + fractionToPercent(num,den), 2);
+  return {
+    type:"mixed_input",
+    prompt:`Convert ${fmtDecimal(pct)}% to a mixed number in its simplest form.`,
+    whole, num: simp.num, den: simp.den,
+    explain:`${fmtDecimal(pct)}% = ${whole} whole(s) plus ${fmtDecimal(fractionToPercent(num,den))}% = ${whole} ${simp.num}/${simp.den}`
+  };
+}
+function generateChallengeQuestion(level){
+  const L = LEVELS[level];
+  const type = choice(L.types);
+  switch(type){
+    case "mcq_pf": return generatePercentageQuestion(level);
+    case "mcq_pd": return generateFractionQuestion(level);
+    case "frac_fill": return generateFractionFillQuestion(level);
+    case "fill_blank": return generateDecimalQuestion(level);
+    case "true_false": return generateTrueFalse(level);
+    case "number_line_fill": return generateNumberLineFillTask(level);
+    case "ordering": return generateOrderingTask(level);
+    case "matching": return generateMatchingTask(level);
+    case "mixed_input": return generateMixedInputQuestion();
+    default: return generateFractionFillQuestion(level);
+  }
+}
+
+/* =========================================================
+   7. SOUND EFFECTS
+========================================================= */
+let audioCtx = null;
+function getCtx(){ if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); } return audioCtx; }
+function playTone(freqs, dur, type){
+  dur = dur||0.15; type = type||"sine";
+  try{
+    const ctx = getCtx();
+    freqs.forEach((f,i)=>{
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.02 + i*0.06);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur + i*0.06);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + i*0.06); o.stop(ctx.currentTime + dur + i*0.08 + i*0.06);
+    });
+  }catch(e){}
+}
+function soundCorrect(){ playTone([523.25,659.25,783.99], 0.18, "triangle"); }
+function soundWrong(){ playTone([220,196], 0.22, "sawtooth"); }
+function soundClick(){ playTone([440], 0.05, "sine"); }
+
+/* =========================================================
+   8. CONFETTI
+========================================================= */
+const confettiCanvas = document.getElementById('confetti-canvas');
+const cctx = confettiCanvas.getContext('2d');
+function resizeCanvas(){ confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; }
+resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+let confettiParticles = [];
+function launchConfetti(){
+  const colors = ['#ff6b4a','#e8a33d','#3f9142','#faf6ea','#154f4f'];
+  for(let i=0;i<70;i++){
+    confettiParticles.push({ x: confettiCanvas.width/2 + (Math.random()-0.5)*200, y: confettiCanvas.height*0.3, vx:(Math.random()-0.5)*8, vy:Math.random()*-6-2, size:Math.random()*6+4, color:choice(colors), rot:Math.random()*360, vr:(Math.random()-0.5)*10, life:100 });
+  }
+  requestAnimationFrame(animateConfetti);
+}
+function animateConfetti(){
+  cctx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
+  confettiParticles.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.rot+=p.vr; p.life--;
+    cctx.save(); cctx.translate(p.x,p.y); cctx.rotate(p.rot*Math.PI/180); cctx.fillStyle=p.color; cctx.fillRect(-p.size/2,-p.size/2,p.size,p.size); cctx.restore();
+  });
+  confettiParticles = confettiParticles.filter(p=>p.life>0 && p.y < confettiCanvas.height+40);
+  if(confettiParticles.length>0) requestAnimationFrame(animateConfetti);
+}
+
+/* =========================================================
+   9. FEEDBACK MESSAGES + TOAST
+========================================================= */
+const GOOD_MESSAGES = ["Brilliant!","Fantastic work!","Excellent thinking!","You're becoming a true Percentage Explorer!","Outstanding!","Spot on!","Sharp eyes!","That's the way!"];
+const BAD_MESSAGES = ["Not quite — let's look closer.","Close! Check your working.","Almost there, try the next one.","Good try — here's a hint for next time."];
+const goodRef = {val:""}, badRef = {val:""};
+function pickMessage(pool, lastRef){ let m,tries=0; do{ m=choice(pool); tries++; } while(m===lastRef.val && tries<10); lastRef.val=m; return m; }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* =========================================================
+   10. STATE + LOCAL STORAGE
+========================================================= */
+const STORAGE_KEY = "pctExplorerProgress_v2";
+let state = loadState();
+function defaultState(){
+  return { attempted:0, correct:0, longestStreak:0, currentStreak:0, totalResponseTime:0, timedCount:0, topicMiss:{}, badges:[], zoneStamps:{1:false,2:false,3:false,4:false}, guidedMode:true, level:"easy", log:[] };
+}
+function loadState(){
+  try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) return Object.assign(defaultState(), JSON.parse(raw)); }catch(e){}
+  return defaultState();
+}
+function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+function updateDashboard(){
+  document.getElementById('dAttempted').textContent = state.attempted;
+  document.getElementById('dCorrect').textContent = state.correct;
+  const acc = state.attempted ? Math.round((state.correct/state.attempted)*100) : 0;
+  document.getElementById('dAccuracy').textContent = acc + "%";
+  document.getElementById('dLongest').textContent = state.longestStreak;
+  const avg = state.timedCount ? (state.totalResponseTime/state.timedCount/1000) : 0;
+  document.getElementById('dAvgTime').textContent = avg.toFixed(1)+"s";
+  let worstTopic = "None yet", worstCount = 0;
+  Object.entries(state.topicMiss).forEach(([k,v])=>{ if(v>worstCount){worstCount=v; worstTopic=k;} });
+  document.getElementById('dTopic').textContent = worstTopic;
+  document.getElementById('scoreVal').textContent = state.correct;
+  document.getElementById('attemptVal').textContent = state.attempted;
+  document.getElementById('streakVal').textContent = state.currentStreak;
+  const badgeRow = document.getElementById('badgeRow'); badgeRow.innerHTML = "";
+  const badgeDefs = [
+    {ic:"🧭", name:"First 10", test:()=>state.attempted>=10},
+    {ic:"🔥", name:"5 Streak", test:()=>state.longestStreak>=5},
+    {ic:"⭐", name:"10 Streak", test:()=>state.longestStreak>=10},
+    {ic:"🎯", name:"Sharp Shooter", test:()=>state.attempted>=10 && (state.correct/state.attempted)>=0.9},
+    {ic:"🏆", name:"Full Expedition", test:()=>Object.values(state.zoneStamps).every(Boolean)}
+  ];
+  badgeDefs.forEach(b=>{ if(b.test()){ const div=document.createElement('div'); div.className="badge"; div.innerHTML=`<span class="ic">${b.ic}</span>${b.name}`; badgeRow.appendChild(div); } });
+  for(let z=1;z<=4;z++){ const el=document.getElementById('stamp'+z); if(el) el.hidden = !state.zoneStamps[z]; }
+}
+function recordAttempt(correct, topicLabel, responseMs){
+  state.attempted++;
+  if(correct){ state.correct++; state.currentStreak++; state.longestStreak = Math.max(state.longestStreak, state.currentStreak); }
+  else { state.currentStreak = 0; state.topicMiss[topicLabel] = (state.topicMiss[topicLabel]||0)+1; }
+  if(responseMs){ state.totalResponseTime += responseMs; state.timedCount++; }
+  state.log.push({t:Date.now(), correct, topic:topicLabel, level:state.level});
+  saveState(); updateDashboard();
+}
+
+/* =========================================================
+   11. NAVIGATION + ACCESSIBILITY
+========================================================= */
+document.querySelectorAll('.station-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    soundClick();
+    document.querySelectorAll('.station-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.zone').forEach(z=>z.classList.remove('active'));
+    document.getElementById('zone'+btn.dataset.zone).classList.add('active');
+    if(btn.dataset.zone!=="5") { state.zoneStamps[btn.dataset.zone]=true; saveState(); updateDashboard(); }
+  });
+});
+document.getElementById('btnContrast').addEventListener('click', ()=> document.documentElement.classList.toggle('hc'));
+document.getElementById('btnTextSize').addEventListener('click', ()=> document.body.classList.toggle('big-text'));
+
+/* =========================================================
+   12. GRID FACTORY (used by all shadable grids)
+========================================================= */
+function buildGrid(container, onChange){
+  container.innerHTML='';
+  const cells=[];
+  for(let i=0;i<100;i++){
+    const c=document.createElement('div');
+    c.className='cell'; c.tabIndex=0; c.setAttribute('role','button'); c.setAttribute('aria-label',`square ${i+1}`);
+    container.appendChild(c); cells.push(c);
+  }
+  let dragging=false, mode='on';
+  function countOn(){ return cells.filter(c=>c.classList.contains('on')).length; }
+  container.addEventListener('mousedown', e=>{
+    if(e.target.classList.contains('cell')){ dragging=true; mode = e.target.classList.contains('on')?'off':'on'; e.target.classList.toggle('on', mode==='on'); if(onChange) onChange(countOn()); }
+  });
+  container.addEventListener('mouseover', e=>{
+    if(dragging && e.target.classList.contains('cell')){ e.target.classList.toggle('on', mode==='on'); if(onChange) onChange(countOn()); }
+  });
+  container.addEventListener('keydown', e=>{
+    if((e.key==='Enter'||e.key===' ') && e.target.classList.contains('cell')){ e.preventDefault(); e.target.classList.toggle('on'); if(onChange) onChange(countOn()); }
+  });
+  document.addEventListener('mouseup', ()=>{ dragging=false; });
+  function setCount(n){ n=Math.max(0,Math.min(100,n)); cells.forEach((c,i)=>c.classList.toggle('on', i<n)); if(onChange) onChange(countOn()); }
+  return { cells, countOn, setCount };
+}
+
+/* =========================================================
+   13. ZONE 1 — GRID CAMP
+========================================================= */
+const hgrid = buildGrid(document.getElementById('hgrid'), (n)=>{
+  document.getElementById('hgridSlider').value = n;
+  document.getElementById('hgridNumber').value = n;
+});
+document.getElementById('hgridSlider').addEventListener('input', e=> hgrid.setCount(parseInt(e.target.value)));
+document.getElementById('hgridNumber').addEventListener('input', e=> hgrid.setCount(parseInt(e.target.value)||0));
+document.getElementById('hgridClear').addEventListener('click', ()=> hgrid.setCount(0));
+document.getElementById('hgridFill').addEventListener('click', ()=> hgrid.setCount(100));
+
+// Combined story + grid activity
+const storyGrid = buildGrid(document.getElementById('storyGrid'));
+let currentStoryPct = 0;
+function refreshContext(){
+  const scenario = generateContextScenario();
+  currentStoryPct = scenario.pct;
+  document.getElementById('contextBox').textContent = scenario.text;
+  storyGrid.setCount(0);
+  document.getElementById('storyFeedback').classList.remove('show');
+}
+document.getElementById('newContextBtn').addEventListener('click', refreshContext);
+document.getElementById('storyCheck').addEventListener('click', ()=>{
+  const fb = document.getElementById('storyFeedback');
+  const ok = storyGrid.countOn()===currentStoryPct;
+  fb.classList.remove('good','bad'); fb.classList.add(ok?'good':'bad','show');
+  if(ok){ fb.textContent = pickMessage(GOOD_MESSAGES, goodRef); soundCorrect(); launchConfetti(); }
+  else { fb.textContent = `${pickMessage(BAD_MESSAGES, badRef)} You shaded ${storyGrid.countOn()} squares — the story needs ${currentStoryPct}.`; soundWrong(); }
+});
+refreshContext();
+
+// Zoom into 1%
+const zoomMainGrid = buildGrid(document.getElementById('zoomMainGrid'));
+const zoomSubGrid = buildGrid(document.getElementById('zoomSubGrid'));
+let zoomTargetWhole = 0, zoomTargetSub = 0;
+function newZoomValue(){
+  zoomTargetWhole = randInt(0,99);
+  zoomTargetSub = randInt(1,99);
+  const targetVal = roundClean(zoomTargetWhole + zoomTargetSub/100, 2);
+  document.getElementById('zoomTarget').textContent = `Show ${fmtDecimal(targetVal)}% using the two grids.`;
+  zoomMainGrid.setCount(0);
+  zoomSubGrid.setCount(0);
+  document.getElementById('zoomFeedback').classList.remove('show');
+}
+document.getElementById('zoomCheck').addEventListener('click', ()=>{
+  const fb = document.getElementById('zoomFeedback');
+  const ok = zoomMainGrid.countOn()===zoomTargetWhole && zoomSubGrid.countOn()===zoomTargetSub;
+  fb.classList.remove('good','bad'); fb.classList.add(ok?'good':'bad','show');
+  if(ok){ fb.textContent = pickMessage(GOOD_MESSAGES, goodRef); soundCorrect(); launchConfetti(); }
+  else { fb.textContent = `${pickMessage(BAD_MESSAGES, badRef)} The big grid needs ${zoomTargetWhole} squares, and the zoomed grid needs ${zoomTargetSub} mini-squares.`; soundWrong(); }
+});
+document.getElementById('zoomNew').addEventListener('click', newZoomValue);
+newZoomValue();
+
+/* =========================================================
+   14. ZONE 2 — NUMBER LINE EXPLORER
+========================================================= */
+const numline = document.getElementById('numline');
+const marker = document.getElementById('marker');
+let nlMin = 0.4, nlMax = 0.7;
+let nlValue = null;
+let nlSourceField = null; // 'pct' | 'frac' | 'dec'
+let nlHasAttempted = false;
+
+document.getElementById('nlFracInputHolder').innerHTML = stackFracHTML(null,null,{editableNum:true, editableDen:true, idPrefix:'nlFrac'});
+
+function renderTicks(){
+  numline.querySelectorAll('.tick, .tick-label').forEach(t=>t.remove());
+  const steps = 10;
+  for(let i=0;i<=steps;i++){
+    const v = nlMin + (nlMax-nlMin)*(i/steps);
+    const pos = (i/steps)*100;
+    const tick = document.createElement('div'); tick.className='tick'; tick.style.left=pos+'%'; numline.appendChild(tick);
+    const label = document.createElement('div'); label.className='tick-label'; label.style.left=pos+'%'; label.textContent = fmtDecimal(roundClean(v,3)); numline.appendChild(label);
+  }
+  numline.appendChild(marker);
+}
+function updateMarkerPos(){
+  if(nlValue===null){ marker.classList.add('hidden-marker'); return; }
+  marker.classList.remove('hidden-marker');
+  const pos = ((nlValue-nlMin)/(nlMax-nlMin))*100;
+  marker.style.left = Math.max(0,Math.min(100,pos))+'%';
+  marker.setAttribute('aria-valuenow', nlValue.toFixed(3));
+}
+renderTicks(); updateMarkerPos();
+
+document.getElementById('nlApplyRange').addEventListener('click', ()=>{
+  const mn = parseFloat(document.getElementById('nlRangeMin').value);
+  const mx = parseFloat(document.getElementById('nlRangeMax').value);
+  if(!isNaN(mn) && !isNaN(mx) && mx>mn){ nlMin=mn; nlMax=mx; renderTicks(); updateMarkerPos(); }
+});
+
+function setFieldsLocked(sourceField){
+  const pctI = document.getElementById('nlPctInput');
+  const decI = document.getElementById('nlDecInput');
+  const fNum = document.getElementById('nlFrac-num');
+  const fDen = document.getElementById('nlFrac-den');
+  [pctI,decI,fNum,fDen].forEach(el=>el.readOnly=false);
+  if(sourceField==='pct'){ pctI.readOnly=true; decI.value=''; fNum.value=''; fDen.value=''; }
+  if(sourceField==='dec'){ decI.readOnly=true; pctI.value=''; fNum.value=''; fDen.value=''; }
+  if(sourceField==='frac'){ fNum.readOnly=true; fDen.readOnly=true; pctI.value=''; decI.value=''; }
+}
+
+document.getElementById('nlPlaceBtn').addEventListener('click', ()=>{
+  const pctI = document.getElementById('nlPctInput');
+  const decI = document.getElementById('nlDecInput');
+  const fNum = document.getElementById('nlFrac-num');
+  const fDen = document.getElementById('nlFrac-den');
+  let dec = null, source = null;
+  if(pctI.value.trim()!==""){ const p = parseFloat(pctI.value); if(!isNaN(p)){ dec = percentToDecimal(p); source='pct'; } }
+  else if(decI.value.trim()!==""){ const d = parseFloat(decI.value); if(!isNaN(d)){ dec = d; source='dec'; } }
+  else if(fNum.value.trim()!=="" && fDen.value.trim()!==""){ const n=parseFloat(fNum.value), d=parseFloat(fDen.value); if(!isNaN(n) && !isNaN(d) && d!==0){ dec = n/d; source='frac'; } }
+  if(dec===null){ showToast("Key in a value in one box first."); return; }
+  nlValue = roundClean(dec,4);
+  nlSourceField = source;
+  // auto-fit the zoom range to include the value
+  nlMin = Math.max(0, roundClean(nlValue-0.2,2));
+  nlMax = roundClean(nlValue+0.2,2);
+  document.getElementById('nlRangeMin').value = nlMin;
+  document.getElementById('nlRangeMax').value = nlMax;
+  renderTicks(); updateMarkerPos();
+  setFieldsLocked(source);
+  document.getElementById('nlCheckBtn').disabled = false;
+  document.getElementById('explainBtn').disabled = true;
+  nlHasAttempted = false;
+  document.getElementById('nlFeedback').classList.remove('show');
+  document.getElementById('explainSteps').hidden = true;
+});
+
+document.getElementById('nlCheckBtn').addEventListener('click', ()=>{
+  if(nlValue===null) return;
+  const correctPct = roundClean(nlValue*100,2);
+  const correctFrac = decimalToFraction(nlValue);
+  const fb = document.getElementById('nlFeedback');
+  const hints = [];
+  let allOk = true;
+
+  if(nlSourceField!=='pct'){
+    const v = parseFloat(document.getElementById('nlPctInput').value);
+    if(isNaN(v) || Math.abs(v-correctPct)>0.5){ allOk=false; hints.push("Percentage: multiply the decimal by 100."); }
+  }
+  if(nlSourceField!=='dec'){
+    const v = parseFloat(document.getElementById('nlDecInput').value);
+    if(isNaN(v) || Math.abs(v-nlValue)>0.005){ allOk=false; hints.push("Decimal: divide the numerator of the fraction by the denominator (or the percentage by 100)."); }
+  }
+  if(nlSourceField!=='frac'){
+    const n = parseFloat(document.getElementById('nlFrac-num').value);
+    const d = parseFloat(document.getElementById('nlFrac-den').value);
+    if(isNaN(n) || isNaN(d) || d===0 || Math.abs(n/d-nlValue)>0.005){ allOk=false; hints.push("Fraction: write the percentage over 100, then simplify."); }
+  }
+  fb.classList.remove('good','bad'); fb.classList.add('show');
+  if(allOk){ fb.classList.add('good'); fb.textContent = pickMessage(GOOD_MESSAGES, goodRef); soundCorrect(); launchConfetti(); }
+  else { fb.classList.add('bad'); fb.textContent = `${pickMessage(BAD_MESSAGES, badRef)} ${hints.join(' ')}`; soundWrong(); }
+
+  nlHasAttempted = true;
+  document.getElementById('explainBtn').disabled = false;
+});
+
+document.getElementById('nlRefreshBtn').addEventListener('click', ()=>{
+  nlValue = null; nlSourceField = null; nlHasAttempted = false;
+  ['nlPctInput','nlDecInput'].forEach(id=>{ const el=document.getElementById(id); el.value=''; el.readOnly=false; });
+  ['nlFrac-num','nlFrac-den'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.value=''; el.readOnly=false; } });
+  document.getElementById('nlCheckBtn').disabled = true;
+  document.getElementById('explainBtn').disabled = true;
+  document.getElementById('nlFeedback').classList.remove('show');
+  document.getElementById('explainSteps').hidden = true;
+  nlMin=0.4; nlMax=0.7;
+  document.getElementById('nlRangeMin').value = nlMin;
+  document.getElementById('nlRangeMax').value = nlMax;
+  renderTicks(); updateMarkerPos();
+});
+
+document.getElementById('explainBtn').addEventListener('click', ()=>{
+  if(!nlHasAttempted || nlValue===null) return;
+  const steps = document.getElementById('explainSteps');
+  const pct = roundClean(nlValue*100,2);
+  const frac = percentToFraction(pct);
+  const dec = roundClean(nlValue,4);
+  steps.hidden = false;
+  steps.innerHTML = `<span class="chain-item">${fmtDecimal(pct)}%</span>
+    <span class="arrow">→</span> ${stackFracHTML(pct,100)}
+    <span class="arrow">→</span> ${stackFracHTML(frac.num,frac.den)} <span class="chain-note">(simplified)</span>
+    <span class="arrow">→</span> <span class="chain-item">${fmtDecimal(dec)}</span>`;
+});
+
+/* =========================================================
+   15. ZONE 3 — RELATIONSHIP BUILDER (scaffolded)
+========================================================= */
+let relDirection = 'pct_to_frac', relStep = 1, relData = {};
+
+const PCT_TO_FRAC_POOL = [8,12,15,18,24,28,32,35,38,42,44,45,48,52,55,58,62,64,65,68,72,74,76,82,84,85,86,92,94,96];
+const PCT_TO_DEC_TENTHS_POOL = [10,20,30,40,50,60,70,80,90];
+const PCT_TO_DEC_HUNDREDTHS_POOL = [12,15,18,24,28,32,35,38,42,44,48,52,55,58,62,64,68,72,74,76,82,84,86,92,94,96];
+const FRAC_TO_PCT_DEN_POOL = [2,4,5,10,20,25,50];
+
+function buildRelData(direction){
+  if(direction==='pct_to_frac'){
+    const pct = choice(PCT_TO_FRAC_POOL);
+    return { pct };
+  }
+  if(direction==='pct_to_dec'){
+    const useTenths = Math.random()<0.4;
+    const pct = useTenths ? choice(PCT_TO_DEC_TENTHS_POOL) : choice(PCT_TO_DEC_HUNDREDTHS_POOL);
+    const denom = useTenths ? 10 : 100;
+    const numerator = useTenths ? pct/10 : pct;
+    return { pct, denom, numerator };
+  }
+  if(direction==='frac_to_pct'){
+    const den = choice(FRAC_TO_PCT_DEN_POOL);
+    const num = randInt(1, den-1);
+    const multiplier = 100/den;
+    const targetNumerator = num*multiplier;
+    return { num, den, multiplier, targetNumerator, pct: targetNumerator };
+  }
+  const useTenths = Math.random()<0.4;
+  let dec, denom, numerator;
+  if(useTenths){ numerator = randInt(1,9); denom = 10; dec = roundClean(numerator/10,1); }
+  else { numerator = randInt(10,99); denom = 100; dec = roundClean(numerator/100,2); }
+  const pct = denom===10 ? numerator*10 : numerator;
+  return { dec, denom, numerator, pct };
+}
+
+const REL_TITLES = {
+  pct_to_frac: d=>`Convert ${fmtDecimal(d.pct)}% to a fraction in its simplest form.`,
+  pct_to_dec: d=>`Convert ${fmtDecimal(d.pct)}% to a decimal.`,
+  frac_to_pct: d=>`Convert ${d.num}/${d.den} to a percentage.`,
+  dec_to_pct: d=>`Convert ${fmtDecimal(d.dec)} to a percentage.`
+};
+
+// Factory: builds an independent scaffolded mini-activity bound to its own
+// target/steps/new-question DOM elements, so two sections can run side by side.
+function makeRelSection(prefix, directions){
+  let direction = directions[0], step = 1, data = {};
+  const idp = prefix; // unique id namespace for this section's inputs
+
+  function checkStep(inputIds, correctVals, hintMsg, successMsg, isLastStep){
+    const fb = document.getElementById(idp+'Fb');
+    fb.classList.remove('good','bad'); fb.classList.add('show');
+    const vals = inputIds.map(id => parseFloat(document.getElementById(id).value));
+    const ok = vals.every((v,i)=> !isNaN(v) && v===correctVals[i]);
+    if(ok){
+      fb.classList.add('good'); fb.textContent = successMsg || pickMessage(GOOD_MESSAGES, goodRef);
+      soundCorrect();
+      if(isLastStep){ launchConfetti(); step = 99; } else { step++; }
+      setTimeout(render, 650);
+    } else {
+      fb.classList.add('bad'); fb.textContent = hintMsg; soundWrong();
+    }
+  }
+
+  function render(){
+    const d = data;
+    document.getElementById(idp+'Target').textContent = REL_TITLES[direction](d);
+    const box = document.getElementById(idp+'Steps');
+
+    if(direction==='pct_to_frac'){
+      if(step===1){
+        box.innerHTML = `<p>Step 1: Write ${fmtDecimal(d.pct)}% as a fraction over 100.</p>
+          <div style="display:flex;justify-content:center;margin:14px 0;">${stackFracHTML(null,100,{editableNum:true, idPrefix:idp+'S1'})}</div>
+          <div class="control-row" style="justify-content:center;"><button class="btn" id="${idp}Btn">Check</button></div>
+          <div class="feedback" id="${idp}Fb"></div>`;
+        document.getElementById(idp+'Btn').addEventListener('click', ()=> checkStep([idp+'S1-num'], [d.pct], "Hint: percent means 'per hundred' — the numerator is the same as the percentage number."));
+      } else if(step===2){
+        const simp = simplifyFraction(d.pct,100);
+        d.simp = simp;
+        box.innerHTML = `<p>Step 2: Simplify ${fmtDecimal(d.pct)}/100 to its simplest form.</p>
+          <div style="display:flex;justify-content:center;margin:14px 0;">${stackFracHTML(null,null,{editableNum:true, editableDen:true, idPrefix:idp+'S2'})}</div>
+          <div class="control-row" style="justify-content:center;"><button class="btn" id="${idp}Btn">Check</button></div>
+          <div class="feedback" id="${idp}Fb"></div>`;
+        document.getElementById(idp+'Btn').addEventListener('click', ()=> checkStep([idp+'S2-num', idp+'S2-den'], [simp.num, simp.den], `Hint: find a common factor of ${fmtDecimal(d.pct)} and 100, then divide both by it.`, null, true));
+      } else {
+        const simp = d.simp || simplifyFraction(d.pct,100);
+        box.innerHTML = `<div class="working-box">
+          <span class="chain-item">${fmtDecimal(d.pct)}%</span> <span class="arrow">→</span> ${stackFracHTML(d.pct,100)}
+          <span class="arrow">→</span> ${stackFracHTML(simp.num,simp.den)} <span class="chain-note">(simplified)</span>
+        </div>`;
+      }
+    }
+
+    else if(direction==='pct_to_dec'){
+      if(step===1){
+        box.innerHTML = `<p>Step 1: Write ${fmtDecimal(d.pct)}% as a fraction with denominator ${d.denom}.</p>
+          <div style="display:flex;justify-content:center;margin:14px 0;">${stackFracHTML(null,d.denom,{editableNum:true, idPrefix:idp+'S1'})}</div>
+          <div class="control-row" style="justify-content:center;"><button class="btn" id="${idp}Btn">Check</button></div>
+          <div class="feedback" id="${idp}Fb"></div>`;
+        const hint = d.denom===10 ? `Hint: 10% is 1/10, so work out how many tenths make ${fmtDecimal(d.pct)}%.` : "Hint: percent means 'per hundred' — the numerator is the same as the percentage number.";
+        document.getElementById(idp+'Btn').addEventListener('click', ()=> checkStep([idp+'S1-num'], [d.numerator], hint));
+      } else if(step===2){
+        box.innerHTML = `<p>Step 2: Write ${d.numerator}/${d.denom} as a decimal.</p>
+          <div class="control-row" style="justify-content:center;"><input type="text" id="${idp}S2dec" style="width:100px;" aria-label="decimal answer"><button class="btn" id="${idp}Btn">Check</button></div>
+          <div class="feedback" id="${idp}Fb"></div>`;
+        document.getElementById(idp+'Btn').addEventListener('click', ()=>{
+          checkStep([idp+'S2dec'], [roundClean(d.numerator/d.denom, d.denom===10?1:2)], `Hint: dividing by ${d.denom} moves the decimal point ${d.denom===10?'one place':'two places'} to the left.`, "Well done! You've converted the percentage to a decimal.", true);
+        });
+      } else {
+        box.innerHTML = `<div class="working-box">
+          <span class="chain-item">${fmtDecimal(d.pct)}%</span> <span class="arrow">→</span> ${stackFracHTML(d.numerator,d.denom)}
+          <span class="arrow">→</span> <span class="chain-item">${fmtDecimal(roundClean(d.numerator/d.denom, d.denom===10?1:2))}</span>
+        </div>`;
+      }
+    }
+
+    else if(direction==='frac_to_pct'){
+      if(step===1){
+        box.innerHTML = `<p>Step 1: Write ${d.num}/${d.den} as an equivalent fraction with denominator 100.</p>
+          <div style="display:flex;justify-content:center;align-items:center;gap:14px;margin:14px 0;">
+            ${stackFracHTML(d.num, d.den)} <span class="arrow">=</span> ${stackFracHTML(null,100,{editableNum:true, idPrefix:idp+'S1'})}
+          </div>
+          <div class="control-row" style="justify-content:center;"><button class="btn" id="${idp}Btn">Check</button></div>
+          <div class="feedback" id="${idp}Fb"></div>`;
+        document.getElementById(idp+'Btn').addEventListener('click', ()=> checkStep([idp+'S1-num'], [d.targetNumerator], `Hint: multiply both the numerator and denominator of ${d.num}/${d.den} by ${d.multiplier} to get a denominator of 100.`));
+      } else if(step===2){
+        box.innerHTML = `<p>Step 2: Write ${d.targetNumerator}/100 as a percentage.</p>
+          <div class="control-row" style="justify-content:center;"><input type="text" id="${idp}S2pct" style="width:100px;" aria-label="percentage answer"><span class="pct-sign">%</span><button class="btn" id="${idp}Btn">Check</button></div>
+          <div class="feedback" id="${idp}Fb"></div>`;
+        document.getElementById(idp+'Btn').addEventListener('click', ()=> checkStep([idp+'S2pct'], [d.pct], "Hint: a fraction over 100 converts directly to a percentage — the numerator becomes the percentage.", "Well done! You've converted the fraction to a percentage.", true));
+      } else {
+        box.innerHTML = `<div class="working-box">
+          ${stackFracHTML(d.num,d.den)} <span class="arrow">→</span> ${stackFracHTML(d.targetNumerator,100)}
+          <span class="arrow">→</span> <span class="chain-item">${fmtDecimal(d.pct)}%</span>
+        </div>`;
+      }
+    }
+
+    else {
+      if(step===1){
+        box.innerHTML = `<p>Step 1: Write ${fmtDecimal(d.dec)} as a fraction with denominator ${d.denom}.</p>
+          <div style="display:flex;justify-content:center;margin:14px 0;">${stackFracHTML(null,d.denom,{editableNum:true, idPrefix:idp+'S1'})}</div>
+          <div class="control-row" style="justify-content:center;"><button class="btn" id="${idp}Btn">Check</button></div>
+          <div class="feedback" id="${idp}Fb"></div>`;
+        const hint = d.denom===10 ? "Hint: one decimal place means tenths." : "Hint: two decimal places means hundredths.";
+        document.getElementById(idp+'Btn').addEventListener('click', ()=> checkStep([idp+'S1-num'], [d.numerator], hint));
+      } else if(step===2){
+        box.innerHTML = `<p>Step 2: Write ${d.numerator}/${d.denom} as a percentage.</p>
+          <div class="control-row" style="justify-content:center;"><input type="text" id="${idp}S2pct" style="width:100px;" aria-label="percentage answer"><span class="pct-sign">%</span><button class="btn" id="${idp}Btn">Check</button></div>
+          <div class="feedback" id="${idp}Fb"></div>`;
+        const hint = d.denom===10 ? "Hint: multiply the numerator by 10 to get the percentage." : "Hint: a fraction over 100 converts directly to a percentage — the numerator becomes the percentage.";
+        document.getElementById(idp+'Btn').addEventListener('click', ()=> checkStep([idp+'S2pct'], [d.pct], hint, "Well done! You've converted the decimal to a percentage.", true));
+      } else {
+        box.innerHTML = `<div class="working-box">
+          <span class="chain-item">${fmtDecimal(d.dec)}</span> <span class="arrow">→</span> ${stackFracHTML(d.numerator,d.denom)}
+          <span class="arrow">→</span> <span class="chain-item">${fmtDecimal(d.pct)}%</span>
+        </div>`;
+      }
+    }
+  }
+
+  function newQuestion(){
+    direction = choice(directions);
+    step = 1;
+    data = buildRelData(direction);
+    render();
+  }
+
+  document.getElementById(idp+'NewBtn').addEventListener('click', newQuestion);
+  newQuestion();
+  return { newQuestion };
+}
+
+const relSectionA = makeRelSection('relA', ['pct_to_frac','pct_to_dec']);
+const relSectionB = makeRelSection('relB', ['frac_to_pct','dec_to_pct']);
+
+/* =========================================================
+   16. ZONE 4 — CONVERSION CHALLENGE
+========================================================= */
+let currentLevel = "easy";
+let currentQuestion = null;
+let questionStartTime = 0;
+let consecutiveCorrect = 0, consecutiveWrong = 0;
+
+document.querySelectorAll('.level-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.level-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentLevel = tab.dataset.level; state.level = currentLevel;
+    consecutiveCorrect=0; consecutiveWrong=0;
+    document.getElementById('adaptVal').textContent = "stable";
+    renderQuestion();
+  });
+});
+
+function buildChoiceButton(opt, wrap){
+  const b = document.createElement('button');
+  b.className='choice-btn';
+  b.dataset.val = opt;
+  const fm = /^(-?\d+)\/(-?\d+)$/.exec(opt.toString());
+  if(fm){ b.innerHTML = stackFracHTML(parseInt(fm[1]), parseInt(fm[2])); } else { b.textContent = opt; }
+  b.addEventListener('click', ()=> handleAnswer(opt.toString()===currentQuestion.answer.toString(), b, wrap));
+  wrap.appendChild(b);
+}
+
+function renderQuestion(){
+  currentQuestion = generateChallengeQuestion(currentLevel);
+  questionStartTime = Date.now();
+  const stage = document.getElementById('qStage');
+  document.getElementById('qFeedback').classList.remove('show');
+  stage.innerHTML = "";
+
+  const qtext = document.createElement('div');
+  qtext.className='q-text';
+  if(currentQuestion.type==="true_false"){
+    qtext.innerHTML = `True or False: ${fmtDecimal(currentQuestion.pctLabel)}% = ${stackFracHTML(currentQuestion.shownNum, currentQuestion.shownDen)}`;
+  } else if(currentQuestion.type==="mcq_pd"){
+    qtext.innerHTML = `Convert ${stackFracHTML(currentQuestion.fracPrompt.num, currentQuestion.fracPrompt.den)}${currentQuestion.fracPrompt.suffix}`;
+  } else {
+    qtext.textContent = currentQuestion.prompt;
+  }
+  stage.appendChild(qtext);
+
+  if(currentQuestion.type==="mcq_pf" || currentQuestion.type==="mcq_pd" || currentQuestion.type==="true_false"){
+    const wrap = document.createElement('div'); wrap.className='choices';
+    currentQuestion.options.forEach(opt=> buildChoiceButton(opt, wrap));
+    stage.appendChild(wrap);
+  }
+  else if(currentQuestion.type==="fill_blank"){
+    const row = document.createElement('div'); row.className='control-row';
+    const input = document.createElement('input'); input.type='text'; input.placeholder='Your answer'; input.style.width='140px';
+    const b = document.createElement('button'); b.className='btn'; b.textContent='Submit';
+    b.addEventListener('click', ()=>{
+      const val = input.value.trim().replace(/\s+/g,'');
+      const ans = currentQuestion.answer.toString().replace(/\s+/g,'');
+      handleAnswer(val.toLowerCase()===ans.toLowerCase(), b, row, true);
+    });
+    row.appendChild(input); row.appendChild(b);
+    stage.appendChild(row);
+  }
+  else if(currentQuestion.type==="frac_fill"){
+    const row = document.createElement('div'); row.className='control-row';
+    row.innerHTML = stackFracHTML(null,null,{editableNum:true, editableDen:true, idPrefix:'ffAns'});
+    const b = document.createElement('button'); b.className='btn'; b.textContent='Submit';
+    b.addEventListener('click', ()=>{
+      const {num,den} = readFracInputs('ffAns');
+      const ok = num===currentQuestion.answerNum && den===currentQuestion.answerDen;
+      handleAnswer(ok, b, row, true);
+    });
+    row.appendChild(b);
+    stage.appendChild(row);
+  }
+  else if(currentQuestion.type==="mixed_input"){
+    const row = document.createElement('div'); row.className='mixed-input-row';
+    row.innerHTML = `<input type="text" class="whole-input" id="miWhole" inputmode="numeric" aria-label="whole number"> ${stackFracHTML(null,null,{editableNum:true, editableDen:true, idPrefix:'miFrac'})}`;
+    stage.appendChild(row);
+    const b = document.createElement('button'); b.className='btn'; b.textContent='Submit'; b.style.marginTop='10px';
+    b.addEventListener('click', ()=>{
+      const w = parseInt(document.getElementById('miWhole').value);
+      const {num,den} = readFracInputs('miFrac');
+      const ok = w===currentQuestion.whole && num===currentQuestion.num && den===currentQuestion.den;
+      handleAnswer(ok, b, stage, true);
+    });
+    stage.appendChild(b);
+  }
+  else if(currentQuestion.type==="number_line_fill"){
+    const wrap = document.createElement('div'); wrap.className='numline-wrap';
+    const segs = currentQuestion.segments;
+    let ticksHTML = '';
+    for(let i=0;i<=segs;i++){ ticksHTML += `<div class="tick" style="left:${(i/segs)*100}%"></div>`; }
+    wrap.innerHTML = `<div class="numline" style="margin:60px 20px 40px;">
+        ${ticksHTML}
+        <div class="tick-label" style="left:0%;">${currentQuestion.leftLabel}</div>
+        <div class="tick-label" style="left:100%;">${currentQuestion.rightLabel}</div>
+        <div class="marker" style="left:${(currentQuestion.targetIndex/segs)*100}%; background:var(--gold);">?</div>
+      </div>`;
+    stage.appendChild(wrap);
+    const row = document.createElement('div'); row.className='control-row'; row.style.justifyContent='center';
+    row.innerHTML = `<input type="text" id="nlfAnswer" style="width:100px;" placeholder="e.g. 35"><span class="pct-sign">%</span>`;
+    const b = document.createElement('button'); b.className='btn'; b.textContent='Check';
+    b.addEventListener('click', ()=>{
+      const val = parseFloat(document.getElementById('nlfAnswer').value);
+      const ok = !isNaN(val) && Math.abs(val - currentQuestion.answer) < 0.6;
+      handleAnswer(ok, b, row, true);
+    });
+    row.appendChild(b);
+    stage.appendChild(row);
+  }
+  else if(currentQuestion.type==="ordering"){
+    const ul = document.createElement('ul'); ul.className='order-list';
+    currentQuestion.items.forEach(it=>{ const li=document.createElement('li'); li.textContent=it.label; li.draggable=true; ul.appendChild(li); });
+    let dragEl=null;
+    ul.addEventListener('dragstart', e=>{ dragEl=e.target; e.target.classList.add('dragging'); });
+    ul.addEventListener('dragend', e=> e.target.classList.remove('dragging'));
+    ul.addEventListener('dragover', e=>{
+      e.preventDefault();
+      const after = [...ul.querySelectorAll('li:not(.dragging)')].find(li=>{ const box=li.getBoundingClientRect(); return e.clientY < box.top+box.height/2; });
+      if(after) ul.insertBefore(dragEl, after); else ul.appendChild(dragEl);
+    });
+    stage.appendChild(ul);
+    const b = document.createElement('button'); b.className='btn'; b.textContent='Check order'; b.style.marginTop='10px';
+    b.addEventListener('click', ()=>{
+      const order = [...ul.querySelectorAll('li')].map(li=>li.textContent);
+      const ok = JSON.stringify(order)===JSON.stringify(currentQuestion.answerOrder);
+      handleAnswer(ok, b, ul, true);
+    });
+    stage.appendChild(b);
+  }
+  else if(currentQuestion.type==="matching"){
+    const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.gap='30px'; wrap.style.flexWrap='wrap';
+    const leftCol = document.createElement('div');
+    const rightCol = document.createElement('div'); rightCol.className='drop-zone'; rightCol.style.flexDirection='column'; rightCol.style.minHeight='auto';
+    const matched = {};
+    currentQuestion.left.forEach(pctLabel=>{
+      const row = document.createElement('div'); row.style.margin='6px 0'; row.style.display='flex'; row.style.gap='8px'; row.style.alignItems='center';
+      const tag = document.createElement('span'); tag.textContent=pctLabel; tag.style.fontFamily='var(--font-mono)'; tag.style.minWidth='60px';
+      const slot = document.createElement('div'); slot.className='drop-zone'; slot.style.minWidth='90px'; slot.dataset.pct = pctLabel;
+      row.appendChild(tag); row.appendChild(slot); leftCol.appendChild(row);
+    });
+    currentQuestion.right.forEach(fracLabel=>{
+      const chip = document.createElement('span'); chip.className='drag-chip'; chip.draggable=true;
+      const fm = /^(-?\d+)\/(-?\d+)$/.exec(fracLabel);
+      chip.innerHTML = fm ? stackFracHTML(parseInt(fm[1]), parseInt(fm[2])) : fracLabel;
+      chip.addEventListener('dragstart', e=> e.dataTransfer.setData('text/plain', fracLabel));
+      rightCol.appendChild(chip);
+    });
+    leftCol.querySelectorAll('.drop-zone').forEach(slot=>{
+      slot.addEventListener('dragover', e=>{ e.preventDefault(); slot.classList.add('over'); });
+      slot.addEventListener('dragleave', ()=> slot.classList.remove('over'));
+      slot.addEventListener('drop', e=>{
+        e.preventDefault(); slot.classList.remove('over');
+        const val = e.dataTransfer.getData('text/plain');
+        const fm = /^(-?\d+)\/(-?\d+)$/.exec(val);
+        slot.innerHTML = fm ? stackFracHTML(parseInt(fm[1]), parseInt(fm[2])) : val;
+        matched[slot.dataset.pct] = val;
+      });
+    });
+    wrap.appendChild(leftCol); wrap.appendChild(rightCol);
+    stage.appendChild(wrap);
+    const b = document.createElement('button'); b.className='btn'; b.textContent='Check matches'; b.style.marginTop='10px';
+    b.addEventListener('click', ()=>{
+      const correctMap = {};
+      currentQuestion.pairs.forEach(p=> correctMap[p.pct]=p.frac);
+      const ok = currentQuestion.left.every(l => matched[l]===correctMap[l]);
+      handleAnswer(ok, b, wrap, true);
+    });
+    stage.appendChild(b);
+  }
+}
+
+function handleAnswer(isCorrect, triggerEl, containerEl, disableAll){
+  const responseMs = Date.now()-questionStartTime;
+  const fb = document.getElementById('qFeedback');
+  fb.classList.remove('good','bad');
+
+  if(containerEl && containerEl.querySelectorAll){
+    containerEl.querySelectorAll('.choice-btn').forEach(b=>{
+      b.disabled = true;
+      if(currentQuestion.answer && b.dataset.val===currentQuestion.answer.toString()) b.classList.add('correct');
+    });
+  }
+  if(triggerEl && triggerEl.classList && triggerEl.classList.contains('choice-btn') && !isCorrect){ triggerEl.classList.add('wrong'); }
+
+  if(isCorrect){
+    consecutiveCorrect++; consecutiveWrong=0;
+    fb.classList.add('good','show'); fb.textContent = pickMessage(GOOD_MESSAGES, goodRef);
+    soundCorrect(); launchConfetti();
+  } else {
+    consecutiveCorrect=0; consecutiveWrong++;
+    fb.classList.add('bad','show'); fb.textContent = `${pickMessage(BAD_MESSAGES, badRef)} ${currentQuestion.explain||""}`;
+    soundWrong();
+  }
+  recordAttempt(isCorrect, currentQuestion.type, responseMs);
+  adaptDifficulty();
+}
+
+function adaptDifficulty(){
+  const order = ["easy","medium","hard","expert"];
+  let idx = order.indexOf(currentLevel);
+  const adaptEl = document.getElementById('adaptVal');
+  if(consecutiveCorrect>=4 && idx<order.length-1){
+    idx++; currentLevel = order[idx];
+    document.querySelectorAll('.level-tab').forEach(t=>t.classList.toggle('active', t.dataset.level===currentLevel));
+    adaptEl.textContent = "leveled up ↑"; consecutiveCorrect=0;
+    showToast("Great streak! Moving up to "+currentLevel+" level.");
+  } else if(consecutiveWrong>=3 && idx>0){
+    idx--; currentLevel = order[idx];
+    document.querySelectorAll('.level-tab').forEach(t=>t.classList.toggle('active', t.dataset.level===currentLevel));
+    adaptEl.textContent = "stepped back ↓"; consecutiveWrong=0;
+    showToast("Let's practise at "+currentLevel+" level for a bit.");
+  } else { adaptEl.textContent = "stable"; }
+}
+
+document.getElementById('nextQBtn').addEventListener('click', renderQuestion);
+renderQuestion();
+
+/* =========================================================
+   17. TEACHER CONTROLS
+========================================================= */
+document.getElementById('genNewSetBtn').addEventListener('click', ()=>{
+  refreshContext(); newZoomValue(); renderQuestion(); relSectionA.newQuestion(); relSectionB.newQuestion();
+  document.getElementById('nlRefreshBtn').click();
+  showToast("New set generated across all zones.");
+});
+document.getElementById('resetSessionBtn').addEventListener('click', ()=>{
+  consecutiveCorrect=0; consecutiveWrong=0; renderQuestion(); showToast("Session reset.");
+});
+document.getElementById('resetProgressBtn').addEventListener('click', ()=>{
+  if(confirm("Reset all saved progress on this device?")){ state = defaultState(); saveState(); updateDashboard(); showToast("Progress reset."); }
+});
+document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
+  let csv = "timestamp,correct,topic,level\n";
+  state.log.forEach(row=>{ csv += `${new Date(row.t).toISOString()},${row.correct},${row.topic},${row.level}\n`; });
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download="percentage_explorer_results.csv"; a.click();
+  URL.revokeObjectURL(url);
+});
+let guided = true;
+document.getElementById('guidedModeBtn').addEventListener('click', (e)=>{
+  guided = !guided; e.target.textContent = "Guided mode: " + (guided?"ON":"OFF"); state.guidedMode = guided; saveState();
+});
+
+/* =========================================================
+   18. INIT
+========================================================= */
+updateDashboard();
+
+})();
+</script>
+</body>
+</html>
