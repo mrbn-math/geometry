@@ -1291,6 +1291,7 @@ const relSectionB = makeRelSection('relB', ['frac_to_pct','dec_to_pct']);
 let currentLevel = "easy";
 let currentQuestion = null;
 let questionStartTime = 0;
+let questionAnswered = false; // once true, further attempts on this question no longer affect the score
 let consecutiveCorrect = 0, consecutiveWrong = 0;
 
 document.querySelectorAll('.level-tab').forEach(tab=>{
@@ -1317,6 +1318,7 @@ function buildChoiceButton(opt, wrap){
 function renderQuestion(){
   currentQuestion = generateChallengeQuestion(currentLevel);
   questionStartTime = Date.now();
+  questionAnswered = false;
   const stage = document.getElementById('qStage');
   document.getElementById('qFeedback').classList.remove('show');
   stage.innerHTML = "";
@@ -1460,6 +1462,9 @@ function renderQuestion(){
 }
 
 function handleAnswer(isCorrect, triggerEl, containerEl, disableAll){
+  if(questionAnswered) return; // first attempt only — no further score changes for this question
+  questionAnswered = true;
+
   const responseMs = Date.now()-questionStartTime;
   const fb = document.getElementById('qFeedback');
   fb.classList.remove('good','bad');
@@ -1469,7 +1474,10 @@ function handleAnswer(isCorrect, triggerEl, containerEl, disableAll){
       b.disabled = true;
       if(currentQuestion.answer && b.dataset.val===currentQuestion.answer.toString()) b.classList.add('correct');
     });
+    containerEl.querySelectorAll('input, button').forEach(el=>{ el.disabled = true; });
+    containerEl.querySelectorAll('[draggable="true"]').forEach(el=>{ el.draggable = false; });
   }
+  if(triggerEl && 'disabled' in triggerEl){ triggerEl.disabled = true; }
   if(triggerEl && triggerEl.classList && triggerEl.classList.contains('choice-btn') && !isCorrect){ triggerEl.classList.add('wrong'); }
 
   if(isCorrect){
