@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Math Mastery Ultimate 🌟</title>
+<style>
+body { font-family: Arial; background:#eef6ff; text-align:center; }
+h1 { background:#4CAF50; color:white; padding:15px; }
+.container { max-width:900px; margin:auto; padding:20px; }
+.card { background:white; padding:20px; margin:15px 0; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1);}
+
+button { padding:10px; margin:5px; border:none; border-radius:5px; background:#2196F3; color:white; cursor:pointer;}
+button:hover { background:#0b7dda;}
+
+select { padding:8px; font-size:15px; border-radius:5px; border:1px solid #ccc; margin:0 6px;}
+label { font-size:14px; color:#444; margin:0 8px; display:inline-block; }
+
+input { padding:10px; font-size:16px; width:160px; text-align:center;}
+
+.grid { font-family: 'Courier New', monospace; font-size:22px; background:#f9fcff; padding:14px 20px; display:inline-block; border-radius:5px; text-align:right; white-space:pre; }
+
+.feedback { font-weight:bold; margin-top:10px; }
+.support { color:#d32f2f; font-weight:bold; }
+.format-note { font-size:14px; color:#777; display:block; margin-top:4px; }
+
+.drag-row { display:flex; justify-content:center; align-items:flex-end; margin:6px 0; }
+.box {
+display:inline-flex;
+align-items:center;
+justify-content:center;
+width:50px; height:50px;
+margin:3px;
+border:2px dashed #999;
+border-radius:6px;
+background:white;
+font-size:20px;
+font-weight:bold;
+cursor:pointer;
+}
+.box.filled { border-style:solid; border-color:#673ab7; background:#ede7f6; }
+.box-label { font-size:11px; color:#777; display:block; margin-top:2px; }
+.box-wrap { display:inline-block; vertical-align:top; text-align:center; }
+.dot-sep { display:inline-block; width:16px; font-size:30px; line-height:50px; }
+.draggable {
+display:inline-block;
+padding:8px 12px;
+margin:4px;
+background:#673ab7;
+color:white;
+border-radius:5px;
+cursor:grab;
+font-weight:bold;
+}
+.drag-tip { color:#777; font-size:13px; margin-top:6px; }
+#digits { min-height:44px; }
+</style>
+
+</head>
+
+<body>
+
+<h1>🌟 Math Mastery Ultimate 🌟</h1>
+
+<div class="container">
+
+<div class="card">
+<h2>Select Mode</h2>
+<button onclick="start('add')">Addition</button>
+<button onclick="start('sub')">Subtraction</button>
+<button onclick="start('mul')">Multiplication</button>
+<button onclick="start('div')">Division</button>
+<button onclick="start('drag')">Drag Place Value</button>
+
+<p id="stats"></p>
+</div>
+
+<div class="card" id="settings" style="display:none;">
+<h3>Question Settings</h3>
+<label>Number type:
+  <select id="numType" onchange="toggleDecimalOptions()">
+    <option value="whole">Whole numbers</option>
+    <option value="decimal">Decimals</option>
+  </select>
+</label>
+<label>Digits in Number 1:
+  <select id="digits1">
+    <option value="1">1</option>
+    <option value="2" selected>2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+  </select>
+</label>
+<label>Digits in Number 2:
+  <select id="digits2">
+    <option value="1">1</option>
+    <option value="2" selected>2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+  </select>
+</label>
+<label id="decPlacesWrap" style="display:none;">Decimal places:
+  <select id="decPlaces">
+    <option value="1">1</option>
+    <option value="2" selected>2</option>
+  </select>
+</label>
+<br>
+<button onclick="next()">Apply &amp; New Question</button>
+</div>
+
+<div class="card" id="game" style="display:none;">
+<h2 id="question"></h2>
+<div class="grid" id="grid"></div>
+
+<div id="dragArea"></div>
+<div id="digits"></div>
+<div class="drag-tip" id="dragTip"></div>
+
+<br>
+<input id="answer" placeholder="Your answer">
+<br><br>
+
+<button onclick="check()">Check</button> <button onclick="next()">Next</button>
+
+<div class="feedback" id="feedback"></div>
+<div id="steps"></div>
+<div class="support" id="support"></div>
+
+</div>
+
+</div>
+
+<script>
+let type="";
+let num1, num2, correct;
+let level=1, streak=0, wrongStreak=0;
+let draggedEl=null;
+
+// Division-specific state: which style the current problem uses.
+let divStyle="exact";
+
+function rand(max){ return Math.floor(Math.random()*max); }
+
+function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+        let j=Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
+    return arr;
+}
+
+function toggleDecimalOptions(){
+    let isDecimal = document.getElementById("numType").value==="decimal";
+    document.getElementById("decPlacesWrap").style.display = isDecimal ? "inline-block" : "none";
+}
+
+function start(t){
+    type=t;
+    document.getElementById("game").style.display="block";
+    document.getElementById("settings").style.display =
+        (t==="add"||t==="sub"||t==="drag") ? "block" : "none";
+    next();
+}
+
+function updateStats(){
+    document.getElementById("stats").innerHTML =
+    `Level: ${level} | Streak: ${streak}`;
+}
+
+function adjust(correctAns){
+    if(correctAns){
+        streak++; wrongStreak=0;
+        if(streak>=3 && level<3){ level++; streak=0; }
+    } else {
+        wrongStreak++; streak=0;
+        if(wrongStreak>=2 && level>1){ level--; wrongStreak=0; }
+    }
+}
+
+// Generates a random whole number string with an exact number of digits
+// (no leading zero unless it's a single-digit number).
+function randDigits(n){
+    if(n<=1) return rand(10);
+    let min = Math.pow(10, n-1);
+    let max = Math.pow(10, n) - 1;
+    return min + rand(max - min + 1);
+}
+
+// Builds a number (as a string) with the requested whole-digit count and
+// decimal-place count, so operand size is fully student-controlled.
+function randNumber(digits, decPlaces){
+    let intPart = randDigits(digits);
+    if(decPlaces > 0){
+        let decPart = rand(Math.pow(10, decPlaces));
+        return `${intPart}.${decPart.toString().padStart(decPlaces, "0")}`;
+    }
+    return intPart.toString();
+}
+
+function generate(){
+    if(type==="add" || type==="sub" || type==="drag"){
+        let numType = document.getElementById("numType").value;
+        let d1 = Number(document.getElementById("digits1").value);
+        let d2 = Number(document.getElementById("digits2").value);
+        let dp = numType==="decimal" ? Number(document.getElementById("decPlaces").value) : 0;
+
+        num1 = randNumber(d1, dp);
+        num2 = randNumber(d2, dp);
+
+        if(type==="sub" && Number(num1) < Number(num2)){
+            let tmp=num1; num1=num2; num2=tmp;
+        }
+
+        if(type==="drag"){
+            let sum = Number(num1) + Number(num2);
+            correct = dp > 0 ? sum.toFixed(dp) : Math.round(sum).toString();
+        } else {
+            let raw = type==="add" ? Number(num1)+Number(num2) : Number(num1)-Number(num2);
+            correct = Math.round(raw * Math.pow(10, dp)) / Math.pow(10, dp);
+        }
+        return;
+    }
+
+    if(type==="mul"){
+        num1= level===1? rand(100):rand(9999);
+        num2= rand(9)+1;
+        correct=num1*num2;
+    }
+
+    if(type==="div"){
+        num2 = rand(9)+1;
+        let styles = ["exact","decimal"];
+        divStyle = styles[rand(styles.length)];
+
+        if(divStyle==="exact"){
+            correct = level===1? rand(50):rand(999);
+            num1 = correct*num2;
+        } else { // decimal
+            num1 = level===1? rand(50):rand(999);
+            correct = Math.round((num1/num2)*100)/100;
+        }
+    }
+}
+
+// Right-pads two numbers (as strings) with non-breaking spaces so their
+// place values line up in columns, accounting for the operator prefix.
+function formatAlgorithm(aStr, bStr, opSymbol){
+    let width = Math.max(aStr.length, bStr.length + 2);
+    let line1 = aStr.padStart(width, "\u00A0");
+    let line2 = (opSymbol + " " + bStr).padStart(width, "\u00A0");
+    let divider = "\u2500".repeat(width);
+    return `${line1}\n${line2}\n${divider}`;
+}
+
+function drawGrid(){
+    let g=document.getElementById("grid");
+
+    if(type==="add"||type==="sub"){
+        g.innerHTML = formatAlgorithm(num1.toString(), num2.toString(), type==="add"?"+":"-");
+    }
+    if(type==="mul"){
+        g.innerHTML = formatAlgorithm(num1.toString(), num2.toString(), "×");
+    }
+    if(type==="div"){
+        g.innerHTML = `${num2}\u00A0⟌\u00A0${num1}`;
+    }
+    if(type==="drag"){
+        // Show the addition problem stacked, same as the algorithm view,
+        // then build the answer boxes below it.
+        g.innerHTML = formatAlgorithm(num1.toString(), num2.toString(), "+");
+        buildDrag();
+    }
+}
+
+function makeBox(place){
+    let wrap=document.createElement("div");
+    wrap.className="box-wrap";
+
+    let box=document.createElement("div");
+    box.className="box";
+    box.dataset.place=place;
+    box.ondragover=e=>e.preventDefault();
+    box.ondrop=e=>{
+        e.preventDefault();
+        let d=e.dataTransfer.getData("text");
+        if(!d) return;
+        if(box.innerText){
+            returnDigitToPool(box.innerText);
+        }
+        if(draggedEl && draggedEl.parentElement){
+            draggedEl.parentElement.removeChild(draggedEl);
+        }
+        box.innerText=d;
+        box.classList.add("filled");
+    };
+    box.onclick=()=>{
+        if(box.innerText){
+            returnDigitToPool(box.innerText);
+            box.innerText="";
+            box.classList.remove("filled");
+        }
+    };
+
+    let label=document.createElement("span");
+    label.className="box-label";
+    label.innerText=place;
+
+    wrap.appendChild(box);
+    wrap.appendChild(label);
+    return wrap;
+}
+
+function returnDigitToPool(d){
+    let digits=document.getElementById("digits");
+    digits.appendChild(makeDraggableTile(d));
+}
+
+function makeDraggableTile(d){
+    let el=document.createElement("div");
+    el.className="draggable";
+    el.innerText=d;
+    el.draggable=true;
+    el.ondragstart=e=>{
+        e.dataTransfer.setData("text", d);
+        draggedEl=el;
+    };
+    return el;
+}
+
+// Place-value names for the whole-number part, large enough to cover
+// two 4-digit numbers added together (up to 5 digits).
+function wholeLabels(n){
+    let bank=["Ten-Thousands","Thousands","Hundreds","Tens","Ones"];
+    return bank.slice(bank.length - n);
+}
+
+function buildDrag(){
+    let area=document.getElementById("dragArea");
+    let digits=document.getElementById("digits");
+    area.innerHTML="";
+    digits.innerHTML="";
+
+    let correctStr = correct.toString();
+    let [intPart, decPart] = correctStr.split(".");
+    decPart = decPart || "";
+
+    let intLabels = wholeLabels(intPart.length);
+    let decLabels = ["Tenths","Hundredths"].slice(0, decPart.length);
+
+    let wholeRow=document.createElement("div");
+    wholeRow.className="drag-row";
+    intLabels.forEach(p=> wholeRow.appendChild(makeBox(p)));
+    area.appendChild(wholeRow);
+
+    if(decPart.length){
+        let decRow=document.createElement("div");
+        decRow.className="drag-row";
+        let dot=document.createElement("div");
+        dot.className="dot-sep";
+        dot.innerText=".";
+        decRow.appendChild(dot);
+        decLabels.forEach(p=> decRow.appendChild(makeBox(p)));
+        area.appendChild(decRow);
+    }
+
+    let allDigits = shuffle((intPart+decPart).split(""));
+    allDigits.forEach(d=> digits.appendChild(makeDraggableTile(d)));
+
+    document.getElementById("dragTip").innerText =
+        "Work out " + num1 + " + " + num2 + ", then drag each digit tile into its place-value box below. Tap a filled box to send its digit back.";
+}
+
+function next(){
+    document.getElementById("feedback").innerHTML="";
+    document.getElementById("steps").innerHTML="";
+    document.getElementById("support").innerHTML="";
+    document.getElementById("answer").value="";
+    document.getElementById("answer").placeholder="Your answer";
+    document.getElementById("dragTip").innerText="";
+
+    generate();
+    drawGrid();
+
+    if(type!=="drag"){
+        let op={add:"+",sub:"-",mul:"×",div:"÷"}[type];
+        let questionHtml = `${num1} ${op} ${num2} = ?`;
+
+        if(type==="div" && divStyle==="decimal"){
+            questionHtml += `<span class="format-note">This one comes out as a decimal.</span>`;
+        }
+
+        document.getElementById("question").innerHTML = questionHtml;
+    } else {
+        document.getElementById("question").innerHTML = `Build the answer!`;
+    }
+
+    updateStats();
+}
+
+function check(){
+    let fb=document.getElementById("feedback");
+
+    if(type==="drag"){
+        let boxes=document.querySelectorAll("#dragArea .box");
+        let raw="";
+        let complete=true;
+        boxes.forEach(b=>{
+            if(!b.innerText) complete=false;
+            raw += b.innerText || "";
+        });
+        if(!complete){
+            fb.innerHTML="✏️ Fill in every box first!";
+            fb.style.color="#ff9800";
+            return;
+        }
+        let decCount = correct.toString().split(".")[1]?.length || 0;
+        if(decCount>0){
+            raw = raw.slice(0, raw.length-decCount) + "." + raw.slice(raw.length-decCount);
+        }
+        gradeNumeric(Number(raw));
+        return;
+    }
+
+    let user = Number(document.getElementById("answer").value);
+    gradeNumeric(user);
+}
+
+function gradeNumeric(user){
+    let fb=document.getElementById("feedback");
+
+    if(Math.abs(user - correct) < 0.01){
+        fb.innerHTML="🌟 Excellent! You did it!";
+        fb.style.color="green";
+        adjust(true);
+    } else {
+        fb.innerHTML="💪 Not yet—let's improve together!";
+        fb.style.color="red";
+        adjust(false);
+        steps();
+        support();
+    }
+
+    updateStats();
+}
+
+function steps(){
+    document.getElementById("steps").innerHTML = `
+    <div style="background:#eef7ff; padding:10px;">
+    <b>Try this:</b><br>
+    1. Line up digits<br>
+    2. Work step-by-step<br>
+    3. Check carefully<br>
+    <br>✅ Answer: ${correct}
+    </div>`;
+}
+
+function support(){
+    if(level===1) document.getElementById("support").innerHTML="🌈 You're learning—keep going!";
+    else if(level===2) document.getElementById("support").innerHTML="👍 Good effort!";
+    else document.getElementById("support").innerHTML="🚀 Challenge mode!";
+}
+</script>
+
+</body>
+</html>
