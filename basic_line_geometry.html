@@ -24,6 +24,7 @@
     --font-mono:'Share Tech Mono',monospace;
   }
   *{box-sizing:border-box;}
+  html{color-scheme:dark;} /* forces native controls (select/option popups) to use a dark palette instead of the browser default light one */
   html,body{margin:0;padding:0;}
   body{
     background:
@@ -129,9 +130,9 @@
       repeating-radial-gradient(circle at 50% 50%, rgba(72,227,255,0.05) 0px, rgba(72,227,255,0.05) 1px, transparent 1px, transparent 46px);
     border:1px solid rgba(72,227,255,0.15);
   }
-  .diagram-frame svg{display:block; width:100%; height:auto;}
+  .diagram-frame svg{display:block; width:100%; height:auto; aspect-ratio:520/480;}
 
-  .ray-line{stroke:#6f89b8; stroke-width:2.4; opacity:0.85;}
+  .ray-line{stroke:#a9c3ee; stroke-width:2.8; opacity:1; stroke-linecap:round;}
   .ray-line.hint-active{
     stroke:var(--orange); stroke-width:3.2;
     filter:drop-shadow(0 0 6px rgba(255,157,67,0.9));
@@ -143,7 +144,7 @@
   }
   .vertex-dot{fill:var(--cyan); filter:drop-shadow(0 0 4px rgba(72,227,255,0.9));}
   .center-dot{fill:var(--text); }
-  .vertex-label{font-family:var(--font-mono); font-size:15px; fill:var(--text-dim);}
+  .vertex-label{font-family:var(--font-mono); font-size:15px; fill:#dff2ff;}
   .sector-arc{fill:none; stroke-width:2; stroke:var(--blue); opacity:0.75;}
   .sector-arc.target{stroke:var(--orange); stroke-width:2.6;}
   .sector-arc.target.solved{stroke:var(--green);}
@@ -183,6 +184,9 @@
     background-size:5px 5px, 5px 5px; background-repeat:no-repeat;
   }
   select:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(72,227,255,0.15);}
+  /* Belt-and-braces: some browsers ignore color-scheme for <option> and default to
+     black-on-white, which made the rule text unreadable on GitHub Pages. Force it. */
+  select option{background:#0f1b30; color:#dff2ff;}
 
   .hint-row{display:flex; gap:10px; margin-bottom:14px;}
   .hint-btn{
