@@ -388,7 +388,7 @@
       given:a, answer:a, correctRule:"vertical",
       build(){
         const cAngle = 180-a; // matches straight-line convention
-        const dAngle = norm360(cAngle+180);
+        const dAngle = cAngle - 180; // keep continuous (not wrapped to 0-360) so the arc sweep math below stays correct
         const rays = [
           {angle:180, label:"A"},
           {angle:cAngle, label:"C"},
@@ -497,7 +497,7 @@
         const sectorDefs = sectors.map((val,i)=>{
           const gIdx = givenPos.indexOf(i);
           return {
-            from: rayAngles[i], to: rayAngles[(i+1)%(2*n)],
+            from: rayAngles[i], to: rayAngles[i]+sectors[i],
             value: (gIdx>-1)? givenVals[gIdx] : (i===targetPos? answer : null),
             isTarget: i===targetPos,
             isGiven: gIdx>-1,
@@ -546,12 +546,18 @@
     }
 
     // sector arcs + labels
-    built.sectors.forEach((sec,idx)=>{
+    // Tier the arc radius by the order among VISIBLE sectors only (not raw array index),
+    // so alternating spacing stays clean even when most sectors in the figure are hidden.
+    // Tiers are kept far apart (48 vs 96, labels at +26) so a label at one tier's radius
+    // can never sit close to another tier's arc radius, regardless of angle.
+    let visibleCount = 0;
+    built.sectors.forEach((sec)=>{
       if(sec.hide) return;
-      const arcR = 55 + (idx%2)*22;
-      let from = sec.from, to = sec.to;
-      // normalize small delta for drawing (assume <180 always in our generators, except reflex marked)
-      let delta = to-from;
+      const tier = visibleCount % 2;
+      visibleCount++;
+      const arcR = tier===0 ? 48 : 96;
+      const from = sec.from, to = sec.to;
+      const delta = to-from;
       const large = Math.abs(delta) > 180 ? 1 : 0;
       const p1 = polar(cx,cy,arcR, from);
       const p2 = polar(cx,cy,arcR, to);
@@ -559,7 +565,7 @@
       const targetCls = sec.isTarget ? " target" + (solved? " solved":"") : "";
       parts.push(`<path class="sector-arc${targetCls}" d="M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} A ${arcR} ${arcR} 0 ${large} ${sweep} ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}"/>`);
       const mid = from + (to-from)/2;
-      const lp = polar(cx,cy,arcR+20, mid);
+      const lp = polar(cx,cy,arcR+26, mid);
       const label = sec.isTarget ? (solved? (sec.value+"°") : "?") : (sec.value+"°");
       parts.push(`<text class="sector-value${sec.isTarget? " target"+(solved?" solved":""):""}" x="${lp.x.toFixed(1)}" y="${lp.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${label}</text>`);
     });
